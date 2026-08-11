@@ -37,7 +37,7 @@ export default function CustomersPage() {
             Converted Clients Directory
           </h1>
           <p className="text-slate-500 text-xs">
-            Manage long-term spiritual relationships, multi-session clients, and portal access (Live Supabase Connected).
+            Manage long-term spiritual relationships, multi-session clients, and portal access.
           </p>
         </div>
 
@@ -84,11 +84,11 @@ export default function CustomersPage() {
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-400">Loading converted clients from live Supabase...</td>
+                  <td colSpan={6} className="py-12 text-center text-slate-400">Loading client directory...</td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-400">No converted clients in live database yet.</td>
+                  <td colSpan={6} className="py-12 text-center text-slate-400">No converted clients recorded yet.</td>
                 </tr>
               ) : (
                 filtered.map((c) => (

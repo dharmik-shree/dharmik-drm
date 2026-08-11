@@ -105,7 +105,7 @@ export default function LeadsPage() {
             Lead Management Pipeline
           </h1>
           <p className="text-slate-500 text-xs">
-            Manage client inquiries across all 14 Vedic guidance pipeline stages (Live Supabase Connected)
+            Manage client inquiries across all 14 Vedic guidance pipeline stages
           </p>
         </div>
 
@@ -217,7 +217,7 @@ export default function LeadsPage() {
 
       {/* Main Content View */}
       {loading ? (
-        <div className="py-16 text-center text-slate-400">Loading leads from live Supabase...</div>
+        <div className="py-16 text-center text-slate-400">Loading pipeline leads...</div>
       ) : viewMode === 'kanban' ? (
         <LeadKanban leads={filteredLeads} onStageChange={handleStageChange} />
       ) : (

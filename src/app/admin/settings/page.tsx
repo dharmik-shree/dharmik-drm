@@ -58,13 +58,13 @@ export default function SettingsPage() {
             CRM & Business Settings
           </h1>
           <p className="text-slate-500 text-xs">
-            Manage Service Dakshina pricing catalog, business details, and system configurations (Live Supabase Connected).
+            Manage Service Dakshina pricing catalog, business details, and system configurations.
           </p>
         </div>
 
         {savedSuccess && (
           <span className="px-3 py-1.5 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-xl flex items-center gap-1.5 animate-in fade-in">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Settings Saved to Supabase!
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" /> Settings Saved Successfully!
           </span>
         )}
       </div>

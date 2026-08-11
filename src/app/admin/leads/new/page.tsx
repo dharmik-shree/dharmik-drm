@@ -348,7 +348,7 @@ export default function CreateLeadPage() {
               disabled={loading}
               className="px-6 py-3 bg-[#1A3C5E] hover:bg-[#15304b] text-amber-400 font-bold text-xs rounded-xl shadow-lg transition flex items-center gap-2 disabled:opacity-50"
             >
-              <Save className="w-4 h-4" /> {loading ? 'Saving to Supabase...' : 'Save Lead Profile'}
+              <Save className="w-4 h-4" /> {loading ? 'Saving Lead Profile...' : 'Save Lead Profile'}
             </button>
           </div>
         </form>

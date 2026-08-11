@@ -156,7 +156,7 @@ export default function PaymentsPage() {
             Financial & Dakshina Payments Dashboard
           </h1>
           <p className="text-slate-500 text-xs">
-            Track full revenue, token payments, online vs cash split, dues, and PDF receipts (Live Supabase).
+            Track full revenue, token payments, online vs cash split, dues, and PDF receipts.
           </p>
         </div>
 
@@ -179,7 +179,7 @@ export default function PaymentsPage() {
             <TrendingUp className="w-4 h-4 text-emerald-600" />
           </div>
           <p className="text-3xl font-extrabold text-slate-900">{formatINR(totalRevenue)}</p>
-          <span className="text-xs text-slate-500 font-medium">Live Supabase payments</span>
+          <span className="text-xs text-slate-500 font-medium">Confirmed Revenue</span>
         </div>
 
         {/* Full vs Token Split */}
@@ -330,7 +330,7 @@ export default function PaymentsPage() {
               {filteredPayments.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-12 text-center text-slate-400">
-                    No payment records in live Supabase. Record a payment to generate receipts.
+                    No payment records logged yet. Record a payment to generate receipts.
                   </td>
                 </tr>
               ) : (
@@ -475,7 +475,7 @@ export default function PaymentsPage() {
                   disabled={recording}
                   className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow transition disabled:opacity-50"
                 >
-                  {recording ? 'Saving to Supabase...' : 'Record & Generate PDF Receipt'}
+                  {recording ? 'Recording Payment...' : 'Record & Generate PDF Receipt'}
                 </button>
               </div>
             </form>

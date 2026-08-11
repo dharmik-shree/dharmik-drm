@@ -99,7 +99,7 @@ export default function TeamPage() {
             Team Management & Activity Monitor
           </h1>
           <p className="text-slate-500 text-xs">
-            Manage team members, roles, lead assignments, and audit activity logs (Live Supabase Connected).
+            Manage team members, roles, lead assignments, and audit activity logs.
           </p>
         </div>
 
@@ -133,11 +133,11 @@ export default function TeamPage() {
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-400">Loading team members from live Supabase...</td>
+                  <td colSpan={6} className="py-12 text-center text-slate-400">Loading team profiles...</td>
                 </tr>
               ) : users.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-slate-400">No staff members in live database. Add a team member to get started.</td>
+                  <td colSpan={6} className="py-12 text-center text-slate-400">No staff members added yet.</td>
                 </tr>
               ) : (
                 users.map((u) => (
@@ -297,7 +297,7 @@ export default function TeamPage() {
                   disabled={submitting}
                   className="px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl shadow transition disabled:opacity-50"
                 >
-                  {submitting ? 'Creating in Supabase...' : 'Save & Add Staff'}
+                  {submitting ? 'Adding Staff...' : 'Save & Add Staff'}
                 </button>
               </div>
             </form>

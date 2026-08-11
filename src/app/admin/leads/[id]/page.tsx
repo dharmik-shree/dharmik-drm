@@ -90,7 +90,7 @@ export default function LeadDetailPage() {
   }
 
   if (loading) {
-    return <div className="p-12 text-center text-slate-400">Loading lead profile from live Supabase...</div>;
+    return <div className="p-12 text-center text-slate-400">Loading client profile...</div>;
   }
 
   if (!lead) {
@@ -455,7 +455,7 @@ export default function LeadDetailPage() {
           {/* Timeline Chatter Feed */}
           <div className="space-y-4 relative before:absolute before:left-3.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
             {activities.length === 0 ? (
-              <p className="text-xs text-slate-400 text-center py-6">No activities recorded yet in live Supabase.</p>
+              <p className="text-xs text-slate-400 text-center py-6">No chatter activities recorded yet.</p>
             ) : (
               activities.map((act) => (
                 <div key={act.id} className="relative pl-8 space-y-1 text-xs">
@@ -576,7 +576,7 @@ export default function LeadDetailPage() {
         {activeTab === 'payments' && (
           <div className="space-y-3">
             {payments.length === 0 ? (
-              <p className="text-xs text-slate-400 py-4">No payment entries recorded yet in live Supabase.</p>
+              <p className="text-xs text-slate-400 py-4">No payment entries recorded yet.</p>
             ) : (
               payments.map((p) => (
                 <div key={p.id} className="p-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-4 text-xs">
@@ -599,7 +599,7 @@ export default function LeadDetailPage() {
         {activeTab === 'reminders' && (
           <div className="space-y-3">
             {reminders.length === 0 ? (
-              <p className="text-xs text-slate-400 py-4">No reminders scheduled yet in live Supabase.</p>
+              <p className="text-xs text-slate-400 py-4">No reminders scheduled yet.</p>
             ) : (
               reminders.map((r) => (
                 <div key={r.id} className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">

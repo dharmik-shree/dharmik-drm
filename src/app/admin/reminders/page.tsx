@@ -116,7 +116,7 @@ export default function RemindersPage() {
             Automated Reminders & Daily Agenda Engine
           </h1>
           <p className="text-slate-500 text-xs">
-            Pre-consultation 15-day, 5-day, 3-day, 1-day reminders, payment follow-ups & WhatsApp templates (Live Supabase).
+            Pre-consultation 15-day, 5-day, 3-day, 1-day reminders, payment follow-ups & WhatsApp templates.
           </p>
         </div>
 
@@ -212,14 +212,14 @@ export default function RemindersPage() {
           </div>
         </div>
       ) : loading ? (
-        <div className="py-12 text-center text-slate-400">Loading reminders from live Supabase...</div>
+        <div className="py-12 text-center text-slate-400">Loading action agenda...</div>
       ) : (
         <div className="space-y-3">
           {currentList.length === 0 ? (
             <div className="bg-white p-12 rounded-2xl border border-slate-200 text-center space-y-2">
               <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
               <p className="font-bold text-slate-800 text-base">All clear! No reminders in this filter.</p>
-              <p className="text-xs text-slate-400">New leads & consultation dates auto-generate reminders in live Supabase.</p>
+              <p className="text-xs text-slate-400">New leads & consultation dates auto-generate reminders.</p>
             </div>
           ) : (
             currentList.map((rem) => {

@@ -85,7 +85,7 @@ export default function DashboardPage() {
         <div className="space-y-1 relative z-10">
           <div className="flex items-center gap-2 text-amber-300 text-xs font-bold uppercase tracking-wider">
             <Sparkles className="w-4 h-4" />
-            Jay Shree Mahakal • Live Supabase Connected
+            Jay Shree Mahakal • Real-time CRM Sync
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold font-serif-heading">
             Dharmikshree CRM Overview
@@ -120,7 +120,7 @@ export default function DashboardPage() {
             <Users className="w-4 h-4 text-blue-600" />
           </div>
           <p className="text-2xl font-bold text-slate-900">{totalLeadsMonth}</p>
-          <span className="text-[11px] text-emerald-600 font-medium">Live Supabase</span>
+          <span className="text-[11px] text-emerald-600 font-medium">Active Records</span>
         </div>
 
         {/* New Leads Today */}
@@ -241,7 +241,7 @@ export default function DashboardPage() {
             <div className="space-y-3">
               {reminders.length === 0 ? (
                 <div className="py-8 text-center border border-dashed border-slate-200 rounded-xl space-y-1">
-                  <p className="text-xs font-semibold text-slate-600">No pending reminders in live database.</p>
+                  <p className="text-xs font-semibold text-slate-600">No pending reminders for today.</p>
                   <p className="text-[11px] text-slate-400">New lead submissions and consultation dates auto-generate reminders.</p>
                 </div>
               ) : (
@@ -312,7 +312,7 @@ export default function DashboardPage() {
 
             <div className="space-y-4 relative before:absolute before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-100">
               {activities.length === 0 ? (
-                <p className="text-xs text-slate-400 text-center py-6">No activities recorded yet in live database.</p>
+                <p className="text-xs text-slate-400 text-center py-6">No team activities logged yet.</p>
               ) : (
                 activities.map((act) => (
                   <div key={act.id} className="relative pl-7 space-y-1 text-xs">

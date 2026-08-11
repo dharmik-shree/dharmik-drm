@@ -126,7 +126,7 @@ export default function StaffLoginPage() {
             disabled={loading}
             className="w-full py-3.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl shadow-lg transition flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            {loading ? 'Authenticating with Supabase...' : 'Secure Sign In'}
+            {loading ? 'Authenticating...' : 'Secure Sign In'}
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
