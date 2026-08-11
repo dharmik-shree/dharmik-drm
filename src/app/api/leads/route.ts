@@ -1,0 +1,102 @@
+import { NextResponse } from 'next/server';
+import { createAdminClient } from '@/lib/supabase/server';
+import { SERVICE_OPTIONS } from '@/lib/constants';
+
+// GET /api/leads — Fetch all active leads from live Supabase
+export async function GET() {
+  try {
+    const supabase = createAdminClient();
+    const { data: leads, error } = await supabase
+      .from('leads')
+      .select('*, assigned_to_user:users!assigned_to(id, full_name, role, avatar_url)')
+      .is('deleted_at', null)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true, leads: leads || [] });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || 'Failed to fetch leads' }, { status: 500 });
+  }
+}
+
+// POST /api/leads — Create a new lead in live Supabase
+export async function POST(request: Request) {
+  try {
+    const supabase = createAdminClient();
+    const body = await request.json();
+
+    const {
+      full_name,
+      phone,
+      whatsapp,
+      email,
+      city,
+      state,
+      country,
+      lead_source,
+      lead_temperature,
+      service_interest,
+      consultation_mode,
+      stage,
+      assigned_to,
+      date_of_consultation,
+      full_amount,
+      amount_paid,
+      internal_notes,
+      tags,
+    } = body;
+
+    if (!full_name || !phone) {
+      return NextResponse.json({ error: 'Full name and phone are required' }, { status: 400 });
+    }
+
+    const calculatedFullAmount = full_amount !== undefined ? Number(full_amount) : (SERVICE_OPTIONS.find(s => s.key === service_interest)?.price || 9900);
+    const calculatedPaid = amount_paid !== undefined ? Number(amount_paid) : 0;
+    const paymentStatus = calculatedPaid >= calculatedFullAmount ? 'full_paid' : calculatedPaid > 0 ? 'token_paid' : 'unpaid';
+
+    const insertPayload = {
+      full_name,
+      phone,
+      whatsapp: whatsapp || phone,
+      email: email || null,
+      city: city || null,
+      state: state || null,
+      country: country || 'India',
+      lead_source: lead_source || 'website',
+      lead_temperature: lead_temperature || 'warm',
+      service_interest: service_interest || 'divine_consultation',
+      consultation_mode: consultation_mode || 'online',
+      stage: stage || 'new_lead',
+      assigned_to: assigned_to || null,
+      date_of_consultation: date_of_consultation || null,
+      payment_status: paymentStatus,
+      token_amount: paymentStatus === 'token_paid' ? calculatedPaid : 0,
+      full_amount: calculatedFullAmount,
+      amount_paid: calculatedPaid,
+      internal_notes: internal_notes || null,
+      tags: Array.isArray(tags) ? tags : tags ? [tags] : [],
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data: newLead, error } = await supabase
+      .from('leads')
+      .insert([insertPayload])
+      .select('*, assigned_to_user:users!assigned_to(id, full_name, role, avatar_url)')
+      .single();
+
+    if (error) throw error;
+
+    // Log activity
+    await supabase.from('lead_activities').insert({
+      lead_id: newLead.id,
+      activity_type: 'system',
+      content: `Lead created manually (${service_interest || 'divine_consultation'})`,
+      is_internal: true,
+    });
+
+    return NextResponse.json({ success: true, lead: newLead });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || 'Failed to create lead' }, { status: 500 });
+  }
+}
