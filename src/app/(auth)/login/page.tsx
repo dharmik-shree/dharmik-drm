@@ -2,33 +2,65 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Sparkles, Shield, UserCheck, Lock, ArrowRight, CheckCircle2 } from 'lucide-react';
-import { MOCK_USERS } from '@/lib/mock-data';
-import { UserRole } from '@/types';
+import { Sparkles, UserCheck, Lock, ArrowRight, AlertCircle } from 'lucide-react';
+import { createBrowserClient } from '@supabase/ssr';
 
 export default function StaffLoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('superadmin@dharmikshree.com');
-  const [password, setPassword] = useState('password123');
-  const [selectedRole, setSelectedRole] = useState<UserRole>('super_admin');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setErrorMessage(null);
 
-    // Set demo role cookie
-    document.cookie = `dharmik_demo_role=${selectedRole}; path=/; max-age=86400`;
+    try {
+      const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
 
-    setTimeout(() => {
+      // 1. Authenticate with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (authError) {
+        throw new Error(authError.message || 'Invalid email or password');
+      }
+
+      if (!authData.user) {
+        throw new Error('User authentication failed');
+      }
+
+      // 2. Fetch assigned role from public.users table
+      const { data: userProfile, error: profileError } = await supabase
+        .from('users')
+        .select('role, is_active')
+        .eq('id', authData.user.id)
+        .single();
+
+      if (profileError || !userProfile) {
+        // Fallback: If user profile doesn't exist in public.users yet, default to super_admin or team_member
+        document.cookie = `dharmik_demo_role=super_admin; path=/; max-age=86400`;
+      } else {
+        if (!userProfile.is_active) {
+          throw new Error('Your account has been deactivated. Please contact Super Admin.');
+        }
+        document.cookie = `dharmik_demo_role=${userProfile.role}; path=/; max-age=86400`;
+      }
+
       router.push('/admin/dashboard');
-    }, 600);
-  };
-
-  const handleQuickRoleSelect = (role: UserRole) => {
-    setSelectedRole(role);
-    document.cookie = `dharmik_demo_role=${role}; path=/; max-age=86400`;
-    router.push('/admin/dashboard');
+      router.refresh();
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Failed to sign in. Please check your credentials.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -43,46 +75,27 @@ export default function StaffLoginPage() {
             <Sparkles className="w-6 h-6" />
           </div>
           <h1 className="text-2xl font-bold font-serif-heading text-white">Dharmikshree CRM</h1>
-          <p className="text-slate-400 text-xs uppercase tracking-widest font-semibold">Staff & Admin Access Portal</p>
+          <p className="text-slate-400 text-xs uppercase tracking-widest font-semibold">Production Staff Login</p>
         </div>
 
-        {/* Demo Role Switcher Quick Bar */}
-        <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-3.5 space-y-2">
-          <p className="text-[11px] font-bold text-amber-400 uppercase tracking-wider text-center">
-            🚀 Direct Demo Access (Select Role)
-          </p>
-          <div className="grid grid-cols-3 gap-2">
-            <button
-              onClick={() => handleQuickRoleSelect('super_admin')}
-              className="py-2 px-2 text-[11px] font-semibold bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 rounded-xl transition text-center"
-            >
-              👑 Owner (Super Admin)
-            </button>
-            <button
-              onClick={() => handleQuickRoleSelect('admin')}
-              className="py-2 px-2 text-[11px] font-semibold bg-blue-500/20 hover:bg-blue-500/30 border border-blue-500/40 text-blue-300 rounded-xl transition text-center"
-            >
-              💼 Admin (K)
-            </button>
-            <button
-              onClick={() => handleQuickRoleSelect('team_member')}
-              className="py-2 px-2 text-[11px] font-semibold bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 rounded-xl transition text-center"
-            >
-              👥 Team (N / D)
-            </button>
+        {errorMessage && (
+          <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl flex items-center gap-2 text-xs text-red-300">
+            <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+            <span>{errorMessage}</span>
           </div>
-        </div>
+        )}
 
         {/* Standard Form */}
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-              Email Address
+              Work Email Address
             </label>
             <div className="relative">
               <input
                 type="email"
                 required
+                placeholder="name@dharmikshree.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl text-white text-sm outline-none transition"
@@ -99,6 +112,7 @@ export default function StaffLoginPage() {
               <input
                 type="password"
                 required
+                placeholder="••••••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-800 focus:border-amber-500 rounded-xl text-white text-sm outline-none transition"
@@ -107,34 +121,19 @@ export default function StaffLoginPage() {
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1">
-              Role Permission Mode
-            </label>
-            <select
-              value={selectedRole}
-              onChange={(e) => setSelectedRole(e.target.value as UserRole)}
-              className="w-full px-4 py-3 bg-slate-950 border border-slate-800 text-white rounded-xl text-sm outline-none"
-            >
-              <option value="super_admin">SUPER ADMIN (Full Owner Access)</option>
-              <option value="admin">ADMIN (K - Senior Management)</option>
-              <option value="team_member">TEAM MEMBER (N / D - Assigned Leads Only)</option>
-            </select>
-          </div>
-
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl shadow-lg transition flex items-center justify-center gap-2"
+            className="w-full py-3.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl shadow-lg transition flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            {loading ? 'Authenticating...' : 'Sign In to Admin Panel'}
+            {loading ? 'Authenticating with Supabase...' : 'Secure Sign In'}
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
 
-        <div className="text-center">
+        <div className="text-center pt-2">
           <a href="/portal-login" className="text-xs text-slate-400 hover:text-amber-400 transition">
-            Looking for Customer Client Portal Login? Click here →
+            Client Portal Login →
           </a>
         </div>
       </div>

@@ -19,24 +19,39 @@ export async function GET() {
   }
 }
 
-// POST /api/team — Create new team user profile in live Supabase
+// POST /api/team — Create new team user profile in live Supabase Auth & public.users
 export async function POST(request: Request) {
   try {
     const supabase = createAdminClient();
     const body = await request.json();
-    const { full_name, phone, whatsapp, role, email } = body;
+    const { full_name, phone, whatsapp, role, email, password } = body;
 
-    if (!full_name || !role) {
-      return NextResponse.json({ error: 'full_name and role required' }, { status: 400 });
+    if (!full_name || !role || !email) {
+      return NextResponse.json({ error: 'full_name, email, and role are required' }, { status: 400 });
     }
 
-    const newId = crypto.randomUUID();
+    const userPassword = password || 'Dharmikshree@2026';
 
+    // 1. Create account in Supabase Auth
+    const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+      email,
+      password: userPassword,
+      email_confirm: true,
+      user_metadata: { full_name, role },
+    });
+
+    if (authError && !authError.message.includes('already registered')) {
+      throw authError;
+    }
+
+    const userId = authUser?.user?.id || crypto.randomUUID();
+
+    // 2. Insert or update in public.users table
     const { data: newUser, error } = await supabase
       .from('users')
-      .insert([
+      .upsert([
         {
-          id: newId,
+          id: userId,
           full_name,
           phone: phone || null,
           whatsapp: whatsapp || phone || null,
@@ -49,7 +64,12 @@ export async function POST(request: Request) {
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, user: newUser });
+    return NextResponse.json({
+      success: true,
+      user: newUser,
+      tempPassword: userPassword,
+      message: `Account created successfully for ${email}. Default password: ${userPassword}`,
+    });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Failed to create team member' }, { status: 500 });
   }

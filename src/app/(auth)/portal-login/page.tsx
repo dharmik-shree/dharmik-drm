@@ -2,24 +2,43 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Sparkles, Phone, Mail, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Sparkles, Mail, ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
+import { createBrowserClient } from '@supabase/ssr';
 import { BUSINESS_INFO } from '@/lib/constants';
 
 export default function CustomerPortalLoginPage() {
   const router = useRouter();
-  const [method, setMethod] = useState<'magic' | 'otp'>('magic');
-  const [email, setEmail] = useState('rajesh.sharma@example.com');
-  const [phone, setPhone] = useState('9820012345');
+  const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleDemoCustomerLogin = () => {
-    document.cookie = `dharmik_demo_role=customer; path=/; max-age=86400`;
-    router.push('/portal/dashboard');
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSent(true);
+    setLoading(true);
+    setErrorMessage(null);
+
+    try {
+      const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/portal/dashboard`,
+        },
+      });
+
+      if (error) throw error;
+      document.cookie = `dharmik_demo_role=customer; path=/; max-age=86400`;
+      setSent(true);
+    } catch (err: any) {
+      setErrorMessage(err.message || 'Failed to send login link');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -38,97 +57,49 @@ export default function CustomerPortalLoginPage() {
           </p>
         </div>
 
-        {/* Demo Login Button */}
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center space-y-2">
-          <p className="text-xs font-bold text-amber-900 uppercase tracking-wider">
-            Explore Demo Client Portal
-          </p>
-          <button
-            onClick={handleDemoCustomerLogin}
-            className="w-full py-2.5 bg-[#1A3C5E] hover:bg-[#15304b] text-amber-300 text-xs font-bold rounded-xl transition shadow"
-          >
-            Enter Client Portal as Demo Client (Rajesh Sharma)
-          </button>
-        </div>
+        {errorMessage && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2 text-xs text-red-700">
+            <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
 
         {sent ? (
           <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 text-center space-y-3">
             <div className="w-10 h-10 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center mx-auto">
               ✓
             </div>
-            <h3 className="font-bold text-emerald-900 text-base">Access Link Sent!</h3>
+            <h3 className="font-bold text-emerald-900 text-base">Magic Link Sent!</h3>
             <p className="text-xs text-slate-600">
-              We have sent a secure login link to <strong className="text-slate-900">{method === 'magic' ? email : `+91 ${phone}`}</strong>.
+              We have sent a secure login link to <strong className="text-slate-900">{email}</strong>.
             </p>
-            <button
-              onClick={handleDemoCustomerLogin}
-              className="text-xs text-emerald-700 underline font-semibold pt-2"
-            >
-              Continue to Portal Now →
-            </button>
+            <p className="text-[11px] text-slate-500">Check your inbox to log in to your client portal.</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="flex border border-slate-200 rounded-xl p-1 bg-slate-50 text-xs">
-              <button
-                type="button"
-                onClick={() => setMethod('magic')}
-                className={`flex-1 py-2 font-medium rounded-lg transition ${
-                  method === 'magic' ? 'bg-white text-[#1A3C5E] shadow-sm' : 'text-slate-500'
-                }`}
-              >
-                Magic Link (Email)
-              </button>
-              <button
-                type="button"
-                onClick={() => setMethod('otp')}
-                className={`flex-1 py-2 font-medium rounded-lg transition ${
-                  method === 'otp' ? 'bg-white text-[#1A3C5E] shadow-sm' : 'text-slate-500'
-                }`}
-              >
-                WhatsApp / SMS OTP
-              </button>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
+                Registered Email Address
+              </label>
+              <div className="relative">
+                <input
+                  type="email"
+                  required
+                  placeholder="client@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-sm outline-none focus:border-amber-500"
+                />
+                <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+              </div>
             </div>
-
-            {method === 'magic' ? (
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-                  Registered Email
-                </label>
-                <div className="relative">
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-sm outline-none focus:border-amber-500"
-                  />
-                  <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
-                </div>
-              </div>
-            ) : (
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 uppercase mb-1">
-                  WhatsApp Number
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3.5 top-3.5 text-sm font-semibold text-slate-500">+91</span>
-                  <input
-                    type="tel"
-                    required
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-xl text-sm outline-none focus:border-amber-500"
-                  />
-                </div>
-              </div>
-            )}
 
             <button
               type="submit"
-              className="w-full py-3.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl shadow transition flex items-center justify-center gap-2"
+              disabled={loading}
+              className="w-full py-3.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl shadow transition flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              Send Secure Access Code
+              {loading ? 'Sending Magic Link...' : 'Send Magic Access Link'}
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
