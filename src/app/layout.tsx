@@ -24,7 +24,12 @@ export const metadata: Metadata = {
   title: 'Dharmikshree CRM & Client Management System',
   description: 'Full-stack CRM and Lead Management System for Dharmikshree — 13th Generation Vedic Astrologer & Vastu Consultant.',
   icons: {
-    icon: '/favicon.ico',
+    icon: [
+      { url: '/favicon.ico' },
+      { url: '/icon.png', type: 'image/png' },
+    ],
+    shortcut: '/favicon.ico',
+    apple: '/apple-icon.png',
   },
 };
 
