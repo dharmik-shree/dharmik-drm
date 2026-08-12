@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 
-// GET /api/reminders — Fetch reminders from live Supabase
+// GET /api/reminders — Fetch reminders with rich lead details from live Supabase
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -11,7 +11,7 @@ export async function GET(request: Request) {
     const supabase = createAdminClient();
     let query = supabase
       .from('reminders')
-      .select('*, leads(full_name, phone, whatsapp, service_interest), assigned_to_user:users!assigned_to(id, full_name, avatar_url)')
+      .select('*, leads(full_name, phone, whatsapp, service_interest, date_of_consultation, consultation_mode, amount_due, stage), assigned_to_user:users!assigned_to(id, full_name, avatar_url)')
       .order('scheduled_for', { ascending: true });
 
     if (leadId) {
@@ -31,6 +31,10 @@ export async function GET(request: Request) {
       lead_name: r.leads?.full_name || 'Client',
       lead_phone: r.leads?.whatsapp || r.leads?.phone || '',
       service_name: r.leads?.service_interest || '',
+      date_of_consultation: r.leads?.date_of_consultation || null,
+      consultation_mode: r.leads?.consultation_mode || 'online',
+      amount_due: r.leads?.amount_due || 0,
+      lead_stage: r.leads?.stage || '',
     }));
 
     return NextResponse.json({ success: true, reminders: formatted });
@@ -39,7 +43,7 @@ export async function GET(request: Request) {
   }
 }
 
-// POST /api/reminders — Batch insert auto-reminders into live Supabase
+// POST /api/reminders — Smartly upsert / reschedule pre-consult reminders without duplicate creation
 export async function POST(request: Request) {
   try {
     const supabase = createAdminClient();
@@ -50,16 +54,58 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Array of reminders required' }, { status: 400 });
     }
 
-    const { data: inserted, error } = await supabase
-      .from('reminders')
-      .insert(reminders)
-      .select();
+    const sampleLeadId = reminders[0]?.lead_id;
 
-    if (error) throw error;
+    if (sampleLeadId) {
+      // Fetch existing pending reminders for this lead
+      const { data: existingPending } = await supabase
+        .from('reminders')
+        .select('id, reminder_type')
+        .eq('lead_id', sampleLeadId)
+        .eq('status', 'pending');
 
-    return NextResponse.json({ success: true, count: inserted?.length || 0 });
+      const existingMap = new Map<string, string>();
+      (existingPending || []).forEach((r: any) => existingMap.set(r.reminder_type, r.id));
+
+      const toInsert: any[] = [];
+      const updatePromises: Promise<any>[] = [];
+
+      for (const rem of reminders) {
+        const existingId = existingMap.get(rem.reminder_type);
+        if (existingId) {
+          // Update existing pending reminder in-place with new scheduled date & template
+          updatePromises.push(
+            (async () => {
+              await supabase
+                .from('reminders')
+                .update({
+                  scheduled_for: rem.scheduled_for,
+                  message_template: rem.message_template,
+                  notes: rem.notes,
+                  assigned_to: rem.assigned_to,
+                })
+                .eq('id', existingId);
+            })()
+          );
+        } else {
+          toInsert.push(rem);
+        }
+      }
+
+      await Promise.all(updatePromises);
+
+      if (toInsert.length > 0) {
+        const { error: insertErr } = await supabase.from('reminders').insert(toInsert);
+        if (insertErr) throw insertErr;
+      }
+    } else {
+      const { error: insertErr } = await supabase.from('reminders').insert(reminders);
+      if (insertErr) throw insertErr;
+    }
+
+    return NextResponse.json({ success: true, message: 'Reminders synchronized and rescheduled successfully' });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Failed to create reminders' }, { status: 500 });
+    return NextResponse.json({ error: err.message || 'Failed to sync reminders' }, { status: 500 });
   }
 }
 

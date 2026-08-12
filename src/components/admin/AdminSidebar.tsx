@@ -53,7 +53,7 @@ export function AdminSidebar({ userRole, userName }: AdminSidebarProps) {
       roles: ['super_admin', 'admin'],
     },
     {
-      label: 'Converted Clients',
+      label: 'Customers',
       href: '/admin/customers',
       icon: Users,
       roles: ['super_admin', 'admin', 'team_member'],

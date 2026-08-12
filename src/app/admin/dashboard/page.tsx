@@ -38,10 +38,10 @@ export default function DashboardPage() {
     async function loadData() {
       try {
         const [resLeads, resAct, resRem, resPay] = await Promise.all([
-          fetch('/api/leads').then(r => r.json()),
-          fetch('/api/activities?limit=10').then(r => r.json()),
-          fetch('/api/reminders?status=pending').then(r => r.json()),
-          fetch('/api/payments').then(r => r.json()),
+          fetch('/api/leads').then((r) => r.json()),
+          fetch('/api/activities?limit=10').then((r) => r.json()),
+          fetch('/api/reminders?status=pending').then((r) => r.json()),
+          fetch('/api/payments').then((r) => r.json()),
         ]);
 
         if (resLeads.leads) setLeads(resLeads.leads);
@@ -58,37 +58,41 @@ export default function DashboardPage() {
     loadData();
   }, []);
 
+  const todayStr = new Date().toDateString();
+
   // Stat calculations
   const totalLeadsMonth = leads.length;
-  const newLeadsToday = leads.filter(l => new Date(l.created_at).toDateString() === new Date().toDateString()).length;
-  const consultationsWeek = leads.filter(l => l.date_of_consultation).length;
+  const newLeadsToday = leads.filter((l) => new Date(l.created_at).toDateString() === todayStr).length;
+  const consultationsWeek = leads.filter((l) => l.date_of_consultation).length;
   const revenueMonth = payments.reduce((sum, p) => sum + Number(p.amount), 0);
   const pendingDuesTotal = leads.reduce((sum, l) => sum + Number(l.amount_due || 0), 0);
-  const remindersTodayCount = reminders.filter(r => r.status === 'pending').length;
+  const remindersTodayCount = reminders.filter(
+    (r) => r.status === 'pending' && new Date(r.scheduled_for).toDateString() === todayStr
+  ).length;
 
   // Pipeline stage counts
-  const stageCounts = PIPELINE_STAGES.map(s => ({
+  const stageCounts = PIPELINE_STAGES.map((s) => ({
     ...s,
-    count: leads.filter(l => l.stage === s.key).length,
+    count: leads.filter((l) => l.stage === s.key).length,
   }));
 
   // Lead source counts
-  const sourceCounts = LEAD_SOURCES.map(src => ({
+  const sourceCounts = LEAD_SOURCES.map((src) => ({
     ...src,
-    count: leads.filter(l => l.lead_source === src.key).length,
-  })).filter(s => s.count > 0);
+    count: leads.filter((l) => l.lead_source === src.key).length,
+  })).filter((s) => s.count > 0);
 
   return (
     <div className="space-y-8 pb-12">
       {/* Welcome Banner */}
-      <div className="bg-gradient-to-r from-[#1A3C5E] via-[#234b75] to-[#1A3C5E] rounded-2xl p-6 sm:p-8 text-white shadow-lg relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="space-y-1 relative z-10">
+      <div className="bg-gradient-to-r from-[#1A3C5E] via-[#234b75] to-[#1A3C5E] rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 border border-amber-500/20">
+        <div className="space-y-1.5 relative z-10">
           <div className="flex items-center gap-2 text-amber-300 text-xs font-bold uppercase tracking-wider">
-            <Sparkles className="w-4 h-4" />
-            Jay Shree Mahakal • Real-time CRM Sync
+            <Sparkles className="w-4 h-4 text-amber-400" />
+            Jay Shree Mahakal • Operational Engine
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold font-serif-heading">
-            Dharmikshree CRM Overview
+            Dharmikshree Enterprise Dashboard
           </h1>
           <p className="text-slate-200 text-xs sm:text-sm">
             Managing client consultations, remedies, Mahapujas, and daily Vedic reminders.
@@ -98,104 +102,113 @@ export default function DashboardPage() {
         <div className="flex items-center gap-3 relative z-10">
           <Link
             href="/admin/leads/new"
-            className="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5"
+            className="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow-md transition flex items-center gap-1.5"
           >
             + Add New Lead
           </Link>
           <Link
             href="/admin/reminders"
-            className="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white font-semibold text-xs rounded-xl transition border border-white/20"
+            className="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white font-semibold text-xs rounded-xl transition border border-white/20 flex items-center gap-2"
           >
-            Today's Agenda ({remindersTodayCount})
+            Today's Agenda
+            {remindersTodayCount > 0 ? (
+              <span className="px-2 py-0.5 text-[10px] font-bold bg-amber-500 text-slate-950 rounded-full">
+                {remindersTodayCount}
+              </span>
+            ) : (
+              <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-500/30 text-emerald-300 rounded-full">
+                Clear
+              </span>
+            )}
           </Link>
         </div>
       </div>
 
-      {/* Top Stats Cards Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      {/* Top Stats Cards Grid (5 core metric cards) */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         {/* Total Leads */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-2">
+        <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase">Total Leads</span>
-            <Users className="w-4 h-4 text-blue-600" />
+            <span className="text-xs font-bold text-slate-500 uppercase">Total Leads</span>
+            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+              <Users className="w-4 h-4" />
+            </div>
           </div>
           <p className="text-2xl font-bold text-slate-900">{totalLeadsMonth}</p>
           <span className="text-[11px] text-emerald-600 font-medium">Active Records</span>
         </div>
 
         {/* New Leads Today */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-2">
+        <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase">New Today</span>
-            <UserPlus className="w-4 h-4 text-emerald-600" />
+            <span className="text-xs font-bold text-slate-500 uppercase">New Today</span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+              <UserPlus className="w-4 h-4" />
+            </div>
           </div>
           <p className="text-2xl font-bold text-slate-900">{newLeadsToday}</p>
           <span className="text-[11px] text-slate-400 font-medium">Captured today</span>
         </div>
 
-        {/* Consultations Week */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs space-y-2">
+        {/* Consultations Scheduled */}
+        <div className="bg-white p-4.5 rounded-2xl border border-slate-200 shadow-xs hover:shadow-md transition space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase">Consultations</span>
-            <CalendarCheck className="w-4 h-4 text-purple-600" />
+            <span className="text-xs font-bold text-slate-500 uppercase">Consultations</span>
+            <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+              <CalendarCheck className="w-4 h-4" />
+            </div>
           </div>
           <p className="text-2xl font-bold text-slate-900">{consultationsWeek}</p>
-          <span className="text-[11px] text-purple-600 font-medium">Scheduled week</span>
+          <span className="text-[11px] text-purple-600 font-medium">Scheduled total</span>
         </div>
 
-        {/* Reminders Due */}
-        <div className="bg-white p-4 rounded-2xl border border-amber-200 bg-amber-50/30 shadow-xs space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-amber-800 uppercase">Reminders Due</span>
-            <BellRing className="w-4 h-4 text-amber-600" />
-          </div>
-          <p className="text-2xl font-bold text-amber-900">{remindersTodayCount}</p>
-          <span className="text-[11px] text-amber-700 font-medium">Requires action</span>
-        </div>
-
-        {/* Revenue This Month (Hidden for team_member) */}
+        {/* Revenue Collected */}
         {userRole !== 'team_member' ? (
-          <div className="bg-white p-4 rounded-2xl border border-emerald-200 bg-emerald-50/30 shadow-xs space-y-2">
+          <div className="bg-white p-4.5 rounded-2xl border border-emerald-200 bg-emerald-50/20 shadow-xs hover:shadow-md transition space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-emerald-800 uppercase">Revenue</span>
-              <IndianRupee className="w-4 h-4 text-emerald-600" />
+              <span className="text-xs font-bold text-emerald-900 uppercase">Revenue</span>
+              <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                <IndianRupee className="w-4 h-4" />
+              </div>
             </div>
             <p className="text-2xl font-bold text-emerald-900">{formatINR(revenueMonth)}</p>
-            <span className="text-[11px] text-emerald-700 font-medium">Collected month</span>
+            <span className="text-[11px] text-emerald-700 font-medium">Collected total</span>
           </div>
         ) : (
-          <div className="bg-slate-100 p-4 rounded-2xl border border-slate-200 text-slate-400 space-y-2">
-            <span className="text-xs font-semibold uppercase">Revenue Access</span>
+          <div className="bg-slate-50 p-4.5 rounded-2xl border border-slate-200 text-slate-400 space-y-2">
+            <span className="text-xs font-bold uppercase">Revenue Access</span>
             <p className="text-xs italic">Restricted to Admin</p>
           </div>
         )}
 
-        {/* Pending Dues (Hidden for team_member) */}
+        {/* Pending Dues */}
         {userRole !== 'team_member' ? (
-          <div className="bg-white p-4 rounded-2xl border border-red-200 bg-red-50/30 shadow-xs space-y-2">
+          <div className="bg-white p-4.5 rounded-2xl border border-red-200 bg-red-50/20 shadow-xs hover:shadow-md transition space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-red-800 uppercase">Pending Dues</span>
-              <AlertTriangle className="w-4 h-4 text-red-600" />
+              <span className="text-xs font-bold text-red-900 uppercase">Pending Dues</span>
+              <div className="w-8 h-8 rounded-xl bg-red-100 text-red-700 flex items-center justify-center">
+                <AlertTriangle className="w-4 h-4" />
+              </div>
             </div>
             <p className="text-2xl font-bold text-red-900">{formatINR(pendingDuesTotal)}</p>
             <span className="text-[11px] text-red-700 font-medium">Uncollected balance</span>
           </div>
         ) : (
-          <div className="bg-slate-100 p-4 rounded-2xl border border-slate-200 text-slate-400 space-y-2">
-            <span className="text-xs font-semibold uppercase">Financial Dues</span>
+          <div className="bg-slate-50 p-4.5 rounded-2xl border border-slate-200 text-slate-400 space-y-2">
+            <span className="text-xs font-bold uppercase">Financial Dues</span>
             <p className="text-xs italic">Restricted to Admin</p>
           </div>
         )}
       </div>
 
       {/* Horizontal Pipeline Funnel */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="font-bold text-base text-[#1A3C5E]">Lead Pipeline Stage Distribution</h3>
             <p className="text-xs text-slate-500">Click any stage to filter pipeline view</p>
           </div>
-          <Link href="/admin/leads" className="text-xs font-semibold text-amber-600 hover:text-amber-700 flex items-center gap-1">
+          <Link href="/admin/leads" className="text-xs font-bold text-amber-600 hover:text-amber-700 flex items-center gap-1">
             View Kanban Board <ArrowUpRight className="w-3.5 h-3.5" />
           </Link>
         </div>
@@ -205,7 +218,7 @@ export default function DashboardPage() {
             <Link
               key={s.key}
               href={`/admin/leads?stage=${s.key}`}
-              className={`p-3 rounded-xl border transition flex flex-col justify-between hover:scale-[1.02] ${s.color}`}
+              className={`p-3 rounded-2xl border transition flex flex-col justify-between hover:scale-[1.02] ${s.color}`}
             >
               <span className="text-[11px] font-bold truncate">{s.label}</span>
               <div className="flex items-baseline justify-between pt-2">
@@ -219,73 +232,142 @@ export default function DashboardPage() {
 
       {/* Main Grid: Today's Agenda & Activity Feed */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left 2 Columns: Today's Agenda */}
+        {/* Left 2 Columns: Today's Action Agenda */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-5">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div className="flex items-center gap-2">
-                <div className="p-2 bg-amber-100 text-amber-800 rounded-xl">
-                  <Clock className="w-5 h-5" />
+                <div className="p-2 bg-amber-500/10 border border-amber-500/30 text-amber-900 rounded-xl">
+                  <Clock className="w-5 h-5 text-amber-600" />
                 </div>
                 <div>
                   <h3 className="font-bold text-slate-900 text-base">Today's Action Agenda</h3>
-                  <p className="text-xs text-slate-500">Reminders, consultations, and payment collections for today</p>
+                  <p className="text-xs text-slate-500">Scheduled consultations & pre-consult reminders for today</p>
                 </div>
               </div>
 
-              <Link href="/admin/reminders" className="text-xs font-semibold text-slate-600 hover:text-amber-600">
-                View All Reminders →
+              <Link href="/admin/reminders" className="text-xs font-bold text-[#1A3C5E] hover:text-amber-600 flex items-center gap-1">
+                View Full Agenda Engine <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
 
+            {/* Today's Consultations Section */}
             <div className="space-y-3">
-              {reminders.length === 0 ? (
-                <div className="py-8 text-center border border-dashed border-slate-200 rounded-xl space-y-1">
-                  <p className="text-xs font-semibold text-slate-600">No pending reminders for today.</p>
-                  <p className="text-[11px] text-slate-400">New lead submissions and consultation dates auto-generate reminders.</p>
-                </div>
-              ) : (
-                reminders.map((rem) => (
-                  <div
-                    key={rem.id}
-                    className="p-4 rounded-xl border border-slate-200 hover:border-amber-300 transition flex items-center justify-between gap-4 bg-slate-50/50"
-                  >
-                    <div className="space-y-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-100 text-amber-800 uppercase">
-                          {rem.reminder_type.replace(/_/g, ' ')}
-                        </span>
-                        <span className="text-xs font-bold text-slate-900 truncate">{rem.lead_name}</span>
-                      </div>
-                      <p className="text-xs text-slate-600 line-clamp-1">{rem.message_template || rem.notes}</p>
-                    </div>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-purple-900 flex items-center gap-1.5 bg-purple-50 px-3 py-1 rounded-lg border border-purple-200">
+                <CalendarCheck className="w-3.5 h-3.5 text-purple-600" /> Scheduled Consultations Today ({
+                  leads.filter((l) => l.date_of_consultation && new Date(l.date_of_consultation).toDateString() === todayStr).length
+                })
+              </span>
 
-                    <div className="flex items-center gap-2 shrink-0">
-                      <a
-                        href={`https://wa.me/${rem.lead_phone?.replace(/\D/g, '')}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition flex items-center gap-1"
-                      >
-                        <MessageSquare className="w-3.5 h-3.5" />
-                        Send WhatsApp
-                      </a>
+              {leads.filter((l) => l.date_of_consultation && new Date(l.date_of_consultation).toDateString() === todayStr).length === 0 ? (
+                <p className="text-xs text-slate-400 py-2 pl-1 italic">No consultations scheduled for today.</p>
+              ) : (
+                leads
+                  .filter((l) => l.date_of_consultation && new Date(l.date_of_consultation).toDateString() === todayStr)
+                  .map((l) => (
+                    <div key={l.id} className="p-3.5 bg-purple-50/40 border border-purple-200 rounded-2xl flex items-center justify-between gap-4 text-xs">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <Link href={`/admin/leads/${l.id}`} className="font-bold text-slate-900 hover:text-purple-700 text-sm">
+                            {l.full_name}
+                          </Link>
+                          <span className="px-2 py-0.5 text-[9px] font-bold rounded-full bg-purple-100 text-purple-800 uppercase">
+                            {l.consultation_mode}
+                          </span>
+                        </div>
+                        <p className="text-slate-500 text-[11px]">
+                          Time: {formatDateTimeIN(l.date_of_consultation!)} • Service: {SERVICE_OPTIONS.find((s) => s.key === l.service_interest)?.label || l.service_interest}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <a
+                          href={`https://wa.me/${l.phone.replace(/\D/g, '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow-xs transition flex items-center gap-1"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" /> WhatsApp
+                        </a>
+                        <Link
+                          href={`/admin/leads/${l.id}`}
+                          className="px-3 py-1.5 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold rounded-xl transition"
+                        >
+                          Open Profile
+                        </Link>
+                      </div>
                     </div>
-                  </div>
-                ))
+                  ))
+              )}
+            </div>
+
+            {/* Today's Due Reminders Section */}
+            <div className="space-y-3 pt-2">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-900 flex items-center gap-1.5 bg-amber-50 px-3 py-1 rounded-lg border border-amber-200">
+                <BellRing className="w-3.5 h-3.5 text-amber-600" /> Reminders Due Today ({remindersTodayCount})
+              </span>
+
+              {remindersTodayCount === 0 ? (
+                <p className="text-xs text-slate-400 py-2 pl-1 italic">No pending reminders due today.</p>
+              ) : (
+                reminders
+                  .filter((r) => r.status === 'pending' && new Date(r.scheduled_for).toDateString() === todayStr)
+                  .map((rem) => (
+                    <div
+                      key={rem.id}
+                      className="p-3.5 rounded-2xl border border-amber-200 bg-amber-50/20 hover:border-amber-400 transition flex items-center justify-between gap-4 text-xs"
+                    >
+                      <div className="space-y-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 text-[9px] font-bold uppercase rounded-full bg-amber-100 text-amber-900 border border-amber-300">
+                            {rem.reminder_type.replace(/_/g, ' ')}
+                          </span>
+                          <span className="text-xs font-bold text-slate-900 truncate">{rem.lead_name}</span>
+                          <span className="text-[10px] text-slate-500">({rem.service_name})</span>
+                        </div>
+                        <p className="text-slate-700 bg-white p-2 rounded-xl border border-slate-200 text-[11px]">
+                          {rem.message_template || rem.notes}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <a
+                          href={`https://wa.me/${rem.lead_phone?.replace(/\D/g, '')}?text=${encodeURIComponent(rem.message_template || '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl shadow-xs transition flex items-center gap-1"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" /> Send WhatsApp
+                        </a>
+                        <button
+                          onClick={async () => {
+                            await fetch('/api/reminders', {
+                              method: 'PATCH',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ id: rem.id, status: 'done' }),
+                            });
+                            setReminders((prev) => prev.filter((r) => r.id !== rem.id));
+                          }}
+                          className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl shadow-xs transition flex items-center gap-1"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Done
+                        </button>
+                      </div>
+                    </div>
+                  ))
               )}
             </div>
           </div>
 
           {/* Lead Sources Distribution Breakdown */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
             <h3 className="font-bold text-slate-900 text-base">Leads by Marketing Channel Source</h3>
             {sourceCounts.length === 0 ? (
               <p className="text-xs text-slate-400 py-4 italic">No marketing channel lead records captured yet.</p>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {sourceCounts.map((src) => (
-                  <div key={src.key} className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                  <div key={src.key} className="p-3 bg-slate-50 border border-slate-200 rounded-2xl space-y-1">
                     <span className="text-xs font-semibold text-slate-600">{src.label}</span>
                     <div className="flex items-baseline justify-between">
                       <span className="text-lg font-bold text-slate-900">{src.count}</span>
@@ -302,10 +384,10 @@ export default function DashboardPage() {
 
         {/* Right 1 Column: Recent Chatter & Activity */}
         <div className="space-y-6">
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-bold text-slate-900 text-base">Recent Team Activity</h3>
-              <span className="text-[10px] uppercase font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+              <span className="text-[10px] uppercase font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
                 Live Chatter Feed
               </span>
             </div>

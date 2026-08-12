@@ -3,7 +3,7 @@ import { DEFAULT_WHATSAPP_TEMPLATES } from './constants';
 import { formatDateIN } from './formatters';
 
 /**
- * Generate 4 pre-consultation reminders when a consultation date is set/updated
+ * Generate 3 pre-consultation reminders (15 days, 5 days, 1 day) when a consultation date is set/updated
  */
 export function generatePreConsultReminders(lead: Partial<Lead>, consultationDateStr: string): Partial<Reminder>[] {
   const consultDate = new Date(consultationDateStr);
@@ -46,20 +46,6 @@ export function generatePreConsultReminders(lead: Partial<Lead>, consultationDat
         .replace('{{date}}', formattedDate)
         .replace('{{mode}}', modeStr),
       notes: `5-day pre-consult reminder for ${clientName}`,
-      assigned_to: lead.assigned_to,
-    },
-    {
-      lead_id: lead.id,
-      reminder_type: 'pre_consult_3day',
-      scheduled_for: calculateDate(3),
-      channel: 'whatsapp',
-      status: 'pending',
-      message_template: DEFAULT_WHATSAPP_TEMPLATES.pre_consult_3day
-        .replace('{{name}}', clientName)
-        .replace('{{service}}', serviceName)
-        .replace('{{date}}', formattedDate)
-        .replace('{{mode}}', modeStr),
-      notes: `3-day pre-consult reminder for ${clientName}`,
       assigned_to: lead.assigned_to,
     },
     {
@@ -120,17 +106,15 @@ export function generateStageTriggeredReminders(lead: Partial<Lead>, newStage: P
       break;
 
     case 'puja_completed':
-      [1, 3, 7].forEach((dayOffset) => {
-        reminders.push({
-          lead_id: lead.id,
-          reminder_type: 'puja_prep',
-          scheduled_for: addDays(dayOffset),
-          channel: 'whatsapp',
-          status: 'pending',
-          message_template: `नमस्ते ${clientName} 🙏 Mahapuja Day +${dayOffset} follow-up. Hope you are experiencing peace and harmony.`,
-          notes: `Puja post-completion follow-up Day ${dayOffset}`,
-          assigned_to: lead.assigned_to,
-        });
+      reminders.push({
+        lead_id: lead.id,
+        reminder_type: 'puja_prep',
+        scheduled_for: addDays(3),
+        channel: 'whatsapp',
+        status: 'pending',
+        message_template: `नमस्ते ${clientName} 🙏 Mahapuja follow-up check. Hope you are experiencing peace and harmony.`,
+        notes: `Puja post-completion follow-up with ${clientName}`,
+        assigned_to: lead.assigned_to,
       });
       break;
 

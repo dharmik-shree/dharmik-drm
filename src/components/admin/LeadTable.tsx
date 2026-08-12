@@ -14,18 +14,39 @@ import {
   MessageSquare,
   Phone,
   CheckSquare,
+  UserCheck,
+  Sparkles,
+  Compass,
 } from 'lucide-react';
 
 interface LeadTableProps {
   leads: Lead[];
   onStageChange: (leadId: string, newStage: PipelineStage) => void;
   userRole: UserRole;
+  onRefreshLeads?: () => void;
 }
 
-export function LeadTable({ leads, onStageChange, userRole }: LeadTableProps) {
+export function LeadTable({ leads, onStageChange, userRole, onRefreshLeads }: LeadTableProps) {
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const [sortField, setSortField] = useState<keyof Lead>('created_at');
   const [sortAsc, setSortAsc] = useState(false);
+  const [convertingId, setConvertingId] = useState<string | null>(null);
+
+  const handlePromote = async (leadId: string, leadName: string) => {
+    if (!confirm(`Promote ${leadName} to Customer?`)) return;
+    setConvertingId(leadId);
+    try {
+      const res = await fetch(`/api/leads/${leadId}/convert`, { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to convert lead');
+      alert(`🎉 ${leadName} promoted to Customer!`);
+      if (onRefreshLeads) onRefreshLeads();
+    } catch (err: any) {
+      alert(err.message || 'Promotion failed');
+    } finally {
+      setConvertingId(null);
+    }
+  };
 
   const toggleSelectAll = () => {
     if (selectedLeadIds.length === leads.length) {
@@ -181,10 +202,20 @@ export function LeadTable({ leads, onStageChange, userRole }: LeadTableProps) {
                     </td>
 
                     <td className="p-3 font-semibold text-slate-900">
-                      <Link href={`/admin/leads/${lead.id}`} className="hover:text-amber-600 transition block">
-                        {lead.full_name}
-                      </Link>
-                      <span className="text-[11px] font-normal text-slate-500">{formatPhoneIN(lead.phone)} • {lead.city || 'India'}</span>
+                      <div className="flex items-center gap-1.5">
+                        <Link href={`/admin/leads/${lead.id}`} className="hover:text-amber-600 transition block font-bold">
+                          {lead.full_name}
+                        </Link>
+                        {lead.is_converted && (
+                          <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-800 rounded-full border border-emerald-300">
+                            Converted
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[11px] font-normal text-slate-500 block">
+                        {formatPhoneIN(lead.phone)} • {lead.city || 'India'}
+                        {lead.rashi && <span className="ml-1 text-purple-700 font-medium">({lead.rashi})</span>}
+                      </span>
                     </td>
 
                     <td className="p-3">
@@ -232,6 +263,17 @@ export function LeadTable({ leads, onStageChange, userRole }: LeadTableProps) {
 
                     <td className="p-3 text-center">
                       <div className="flex items-center justify-center gap-1.5">
+                        {!lead.is_converted && (
+                          <button
+                            type="button"
+                            disabled={convertingId === lead.id}
+                            onClick={() => handlePromote(lead.id, lead.full_name)}
+                            className="p-1.5 text-purple-700 hover:bg-purple-100 rounded-lg transition"
+                            title="Promote Lead to Customer"
+                          >
+                            <Sparkles className="w-4 h-4 text-amber-500" />
+                          </button>
+                        )}
                         <a
                           href={`https://wa.me/${lead.phone.replace(/\D/g, '')}`}
                           target="_blank"

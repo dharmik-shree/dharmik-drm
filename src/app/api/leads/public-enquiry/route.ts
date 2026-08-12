@@ -35,10 +35,31 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { full_name, phone, email, city, service_interest, consultation_mode, message, lead_source } = body;
+    const {
+      full_name,
+      phone,
+      email,
+      city,
+      service_interest,
+      consultation_mode,
+      message,
+      lead_source,
+      date_of_birth,
+      time_of_birth,
+      birth_place,
+      gender,
+      relation,
+      address,
+      pincode,
+      marital_status,
+      gotra,
+      rashi,
+      occupation,
+      kundali_notes,
+    } = body;
 
     if (!full_name || !phone || !city) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400, headers: corsHeaders });
+      return NextResponse.json({ error: 'Missing required fields: full_name, phone, city' }, { status: 400, headers: corsHeaders });
     }
 
     const supabase = createAdminClient();
@@ -49,8 +70,20 @@ export async function POST(request: Request) {
       whatsapp: phone,
       email: email || null,
       city,
+      address: address || null,
+      pincode: pincode || null,
       state: null,
       country: 'India',
+      date_of_birth: date_of_birth || null,
+      time_of_birth: time_of_birth || null,
+      birth_place: birth_place || null,
+      gender: gender || null,
+      relation: relation || 'self',
+      marital_status: marital_status || null,
+      gotra: gotra || null,
+      rashi: rashi || null,
+      occupation: occupation || null,
+      kundali_notes: kundali_notes || null,
       lead_source: lead_source || 'website',
       lead_temperature: 'warm' as const,
       service_interest: service_interest || 'divine_consultation',
@@ -69,7 +102,7 @@ export async function POST(request: Request) {
       puja_status: 'not_booked' as const,
       stone_status: 'not_decided' as const,
       testimonial_status: 'not_collected' as const,
-      internal_notes: message ? `Enquiry Note: ${message}` : null,
+      internal_notes: message ? `Website Note: ${message}` : null,
       tags: ['Website Lead'],
       is_converted: false,
       updated_at: new Date().toISOString(),

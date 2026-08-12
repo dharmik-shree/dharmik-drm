@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sparkles, UserCheck, Lock, ArrowRight, AlertCircle } from 'lucide-react';
-import { createBrowserClient } from '@supabase/ssr';
+import { createClient } from '@/lib/supabase/client';
 
 export default function StaffLoginPage() {
   const router = useRouter();
@@ -18,10 +18,7 @@ export default function StaffLoginPage() {
     setErrorMessage(null);
 
     try {
-      const supabase = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      );
+      const supabase = createClient();
 
       // 1. Authenticate with Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
@@ -54,11 +51,10 @@ export default function StaffLoginPage() {
         document.cookie = `dharmik_demo_role=${userProfile.role}; path=/; max-age=86400`;
       }
 
-      router.push('/admin/dashboard');
-      router.refresh();
+      // Hard redirect ensures cookies are fully attached and sent to Next.js middleware
+      window.location.href = '/admin/dashboard';
     } catch (err: any) {
       setErrorMessage(err.message || 'Failed to sign in. Please check your credentials.');
-    } finally {
       setLoading(false);
     }
   };

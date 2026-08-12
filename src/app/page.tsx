@@ -59,12 +59,12 @@ export default function RootHomePage() {
               </p>
             </div>
 
-            <Link
+            <a
               href="/admin/dashboard"
               className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow transition flex items-center justify-center gap-1.5"
             >
               Enter Admin Panel <ArrowRight className="w-4 h-4" />
-            </Link>
+            </a>
           </div>
 
           {/* Card 2: Public Enquiry Form */}
@@ -99,12 +99,12 @@ export default function RootHomePage() {
               </p>
             </div>
 
-            <Link
+            <a
               href="/portal/dashboard"
               className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow transition flex items-center justify-center gap-1.5"
             >
               Enter Client Portal <ArrowRight className="w-4 h-4" />
-            </Link>
+            </a>
           </div>
         </div>
       </div>

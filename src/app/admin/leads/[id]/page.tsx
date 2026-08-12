@@ -23,8 +23,11 @@ import {
   ShieldCheck,
   Package,
   Award,
+  Compass,
+  Star,
+  UserPlus,
 } from 'lucide-react';
-import { PIPELINE_STAGES, SERVICE_OPTIONS, LEAD_TEMPERATURES } from '@/lib/constants';
+import { PIPELINE_STAGES, SERVICE_OPTIONS, LEAD_TEMPERATURES, GENDER_OPTIONS, RELATION_OPTIONS, MARITAL_STATUS_OPTIONS, RASHI_OPTIONS } from '@/lib/constants';
 import { formatINR, formatPhoneIN, formatDateIN, formatDateTimeIN } from '@/lib/formatters';
 import { generateWhatsAppLink } from '@/lib/whatsapp';
 import { generatePreConsultReminders } from '@/lib/reminders';
@@ -42,6 +45,22 @@ export default function LeadDetailPage() {
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [converting, setConverting] = useState(false);
+  const [showKundaliModal, setShowKundaliModal] = useState(false);
+  const [kundaliForm, setKundaliForm] = useState({
+    date_of_birth: '',
+    time_of_birth: '',
+    birth_place: '',
+    gender: 'male',
+    relation: 'self',
+    address: '',
+    pincode: '',
+    marital_status: 'single',
+    gotra: '',
+    rashi: '',
+    occupation: '',
+    kundali_notes: '',
+  });
 
   // Quick Action Input State
   const [newNote, setNewNote] = useState('');
@@ -74,9 +93,24 @@ export default function LeadDetailPage() {
       ]);
 
       if (resLead.lead) {
-        setLead(resLead.lead);
+        const l = resLead.lead;
+        setLead(l);
+        setKundaliForm({
+          date_of_birth: l.date_of_birth || '',
+          time_of_birth: l.time_of_birth || '',
+          birth_place: l.birth_place || '',
+          gender: l.gender || 'male',
+          relation: l.relation || 'self',
+          address: l.address || '',
+          pincode: l.pincode || '',
+          marital_status: l.marital_status || 'single',
+          gotra: l.gotra || '',
+          rashi: l.rashi || '',
+          occupation: l.occupation || '',
+          kundali_notes: l.kundali_notes || '',
+        });
         setChecklist((prev) =>
-          prev.map((c) => (c.id === '3' ? { ...c, completed: resLead.lead.protocol_message_sent } : c))
+          prev.map((c) => (c.id === '3' ? { ...c, completed: l.protocol_message_sent } : c))
         );
       }
       if (resAct.activities) setActivities(resAct.activities);
@@ -84,10 +118,56 @@ export default function LeadDetailPage() {
       if (resPay.payments) setPayments(resPay.payments);
     } catch (err) {
       console.error('Error fetching lead profile from Supabase:', err);
-    } fontFinally: {
+    } finally {
       setLoading(false);
     }
   }
+
+  const handlePromoteToCustomer = async () => {
+    if (!lead) return;
+    if (!confirm(`Are you sure you want to promote ${lead.full_name} to Customer status? This will create a permanent client profile.`)) return;
+
+    setConverting(true);
+    try {
+      const res = await fetch(`/api/leads/${lead.id}/convert`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to promote lead');
+
+      if (data.lead) setLead(data.lead);
+
+      const resAct = await fetch(`/api/activities?lead_id=${lead.id}`).then((r) => r.json());
+      if (resAct.activities) setActivities(resAct.activities);
+
+      alert(`🎉 ${lead.full_name} has been promoted to Customer! Registered Customer ID: ${data.customer_id}`);
+    } catch (err: any) {
+      alert(err.message || 'Promotion to customer failed');
+    } finally {
+      setConverting(false);
+    }
+  };
+
+  const handleSaveKundali = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!lead) return;
+
+    try {
+      const res = await fetch(`/api/leads/${lead.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(kundaliForm),
+      });
+
+      const data = await res.json();
+      if (data.lead) {
+        setLead(data.lead);
+        setShowKundaliModal(false);
+      }
+    } catch (err) {
+      console.error('Failed to update Kundali profile:', err);
+    }
+  };
 
   if (loading) {
     return <div className="p-12 text-center text-slate-400">Loading client profile...</div>;
@@ -169,7 +249,7 @@ export default function LeadDetailPage() {
         }),
       });
 
-      // Auto-generate 4 pre-consult reminders
+      // Synchronize pre-consult reminders (updates existing pending reminders in-place)
       const autoRems = generatePreConsultReminders(lead, isoDate);
       await fetch('/api/reminders', {
         method: 'POST',
@@ -181,13 +261,16 @@ export default function LeadDetailPage() {
       const resRem = await fetch(`/api/reminders?lead_id=${lead.id}`).then((r) => r.json());
       if (resRem.reminders) setReminders(resRem.reminders);
 
+      const isRescheduled = !!lead.date_of_consultation;
       const resAct = await fetch('/api/activities', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           lead_id: lead.id,
           activity_type: 'system',
-          content: `Consultation date set to ${formatDateIN(isoDate)}. Auto-generated pre-consult reminders.`,
+          content: isRescheduled
+            ? `Consultation date rescheduled to ${formatDateIN(isoDate)}. 15-day, 5-day, and 1-day reminders updated.`
+            : `Consultation date set to ${formatDateIN(isoDate)}. 15-day, 5-day, and 1-day reminders scheduled.`,
         }),
       });
       const dataAct = await resAct.json();
@@ -256,6 +339,20 @@ export default function LeadDetailPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          {lead.is_converted ? (
+            <span className="px-3.5 py-2 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-xl border border-emerald-300 flex items-center gap-1.5">
+              <UserCheck className="w-4 h-4 text-emerald-600" /> Converted Customer
+            </span>
+          ) : (
+            <button
+              onClick={handlePromoteToCustomer}
+              disabled={converting}
+              className="px-3.5 py-2 bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold rounded-xl shadow transition flex items-center gap-1.5 disabled:opacity-50"
+            >
+              <Sparkles className="w-4 h-4 text-amber-300" /> {converting ? 'Promoting...' : 'Promote to Customer'}
+            </button>
+          )}
+
           <a
             href={generateWhatsAppLink(lead.phone, `नमस्ते ${lead.full_name} 🙏 Dharmikshree team connecting with you.`)}
             target="_blank"
@@ -317,6 +414,65 @@ export default function LeadDetailPage() {
               <div className="flex justify-between">
                 <span className="text-slate-500">Assigned To:</span>
                 <span className="font-semibold text-slate-900">{lead.assigned_to_user?.full_name || 'Unassigned'}</span>
+              </div>
+            </div>
+
+            {/* Vedic Kundali & Profiling Card */}
+            <div className="p-3.5 bg-amber-50/80 border border-amber-300 rounded-xl space-y-2 relative">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-amber-900 uppercase tracking-wider text-[11px] flex items-center gap-1">
+                  <Compass className="w-3.5 h-3.5 text-amber-600" /> Vedic Kundali & Profile
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowKundaliModal(true)}
+                  className="px-2 py-0.5 text-[10px] font-bold bg-amber-200 text-amber-900 rounded-lg hover:bg-amber-300 transition"
+                >
+                  Edit Profile
+                </button>
+              </div>
+
+              <div className="space-y-1.5 pt-1 text-slate-800 text-[11px]">
+                <div className="flex justify-between border-b border-amber-200/60 pb-1">
+                  <span className="text-slate-600">DOB & Time:</span>
+                  <span className="font-bold text-slate-900">
+                    {lead.date_of_birth ? formatDateIN(lead.date_of_birth) : 'Not set'} {lead.time_of_birth ? `(${lead.time_of_birth})` : ''}
+                  </span>
+                </div>
+
+                <div className="flex justify-between border-b border-amber-200/60 pb-1">
+                  <span className="text-slate-600">Birth Place:</span>
+                  <span className="font-semibold text-slate-900">{lead.birth_place || 'Not set'}</span>
+                </div>
+
+                <div className="flex justify-between border-b border-amber-200/60 pb-1">
+                  <span className="text-slate-600">Relation & Gender:</span>
+                  <span className="font-semibold text-slate-900 capitalize">{lead.relation || 'self'} • {lead.gender || 'N/A'}</span>
+                </div>
+
+                <div className="flex justify-between border-b border-amber-200/60 pb-1">
+                  <span className="text-slate-600">Moon Rashi:</span>
+                  <span className="font-bold text-purple-900">{lead.rashi || 'Not specified'}</span>
+                </div>
+
+                <div className="flex justify-between border-b border-amber-200/60 pb-1">
+                  <span className="text-slate-600">Gotra & Profession:</span>
+                  <span className="font-semibold text-slate-900">{lead.gotra || 'N/A'} {lead.occupation ? `(${lead.occupation})` : ''}</span>
+                </div>
+
+                {lead.address && (
+                  <div className="border-b border-amber-200/60 pb-1">
+                    <span className="text-slate-600 block">Address:</span>
+                    <span className="font-medium text-slate-900">{lead.address} {lead.pincode ? `- ${lead.pincode}` : ''}</span>
+                  </div>
+                )}
+
+                {lead.kundali_notes && (
+                  <div className="pt-1">
+                    <span className="text-amber-900 font-bold block text-[10px]">Kundali Notes:</span>
+                    <p className="text-slate-700 italic">{lead.kundali_notes}</p>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -614,6 +770,192 @@ export default function LeadDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Kundali & Profiling Edit Modal */}
+      {showKundaliModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-2xl w-full border border-amber-200 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-lg font-bold font-serif-heading text-[#1A3C5E] flex items-center gap-2">
+                <Compass className="w-5 h-5 text-amber-600" /> Edit Vedic Kundali & Profiling Details
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowKundaliModal(false)}
+                className="text-slate-400 hover:text-slate-700 text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveKundali} className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Date of Birth</label>
+                  <input
+                    type="date"
+                    value={kundaliForm.date_of_birth}
+                    onChange={(e) => setKundaliForm({ ...kundaliForm, date_of_birth: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Time of Birth</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 07:45 AM"
+                    value={kundaliForm.time_of_birth}
+                    onChange={(e) => setKundaliForm({ ...kundaliForm, time_of_birth: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Place of Birth</label>
+                  <input
+                    type="text"
+                    placeholder="City, State"
+                    value={kundaliForm.birth_place}
+                    onChange={(e) => setKundaliForm({ ...kundaliForm, birth_place: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-amber-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Gender</label>
+                  <select
+                    value={kundaliForm.gender}
+                    onChange={(e) => setKundaliForm({ ...kundaliForm, gender: e.target.value as any })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-amber-500"
+                  >
+                    {GENDER_OPTIONS.map((g) => (
+                      <option key={g.key} value={g.key}>{g.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Relation</label>
+                  <select
+                    value={kundaliForm.relation}
+                    onChange={(e) => setKundaliForm({ ...kundaliForm, relation: e.target.value as any })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-amber-500"
+                  >
+                    {RELATION_OPTIONS.map((r) => (
+                      <option key={r.key} value={r.key}>{r.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Marital Status</label>
+                  <select
+                    value={kundaliForm.marital_status}
+                    onChange={(e) => setKundaliForm({ ...kundaliForm, marital_status: e.target.value as any })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-amber-500"
+                  >
+                    {MARITAL_STATUS_OPTIONS.map((m) => (
+                      <option key={m.key} value={m.key}>{m.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Moon Rashi</label>
+                  <select
+                    value={kundaliForm.rashi}
+                    onChange={(e) => setKundaliForm({ ...kundaliForm, rashi: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-amber-500"
+                  >
+                    <option value="">Select Rashi</option>
+                    {RASHI_OPTIONS.map((r) => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Gotra</label>
+                  <input
+                    type="text"
+                    placeholder="Kashyap, Bharadwaj"
+                    value={kundaliForm.gotra}
+                    onChange={(e) => setKundaliForm({ ...kundaliForm, gotra: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Occupation</label>
+                  <input
+                    type="text"
+                    placeholder="Profession"
+                    value={kundaliForm.occupation}
+                    onChange={(e) => setKundaliForm({ ...kundaliForm, occupation: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-amber-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Street Address</label>
+                  <input
+                    type="text"
+                    placeholder="Address"
+                    value={kundaliForm.address}
+                    onChange={(e) => setKundaliForm({ ...kundaliForm, address: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Pincode</label>
+                  <input
+                    type="text"
+                    placeholder="380001"
+                    value={kundaliForm.pincode}
+                    onChange={(e) => setKundaliForm({ ...kundaliForm, pincode: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-amber-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Kundali & Session Notes</label>
+                <textarea
+                  rows={3}
+                  placeholder="Notes on Ascendant (Lagna), planetary positions, planetary periods..."
+                  value={kundaliForm.kundali_notes}
+                  onChange={(e) => setKundaliForm({ ...kundaliForm, kundali_notes: e.target.value })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowKundaliModal(false)}
+                  className="px-4 py-2 text-slate-600 font-semibold hover:bg-slate-100 rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl shadow transition"
+                >
+                  Save Kundali Profile
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

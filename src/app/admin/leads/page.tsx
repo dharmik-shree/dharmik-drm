@@ -221,7 +221,7 @@ export default function LeadsPage() {
       ) : viewMode === 'kanban' ? (
         <LeadKanban leads={filteredLeads} onStageChange={handleStageChange} />
       ) : (
-        <LeadTable leads={filteredLeads} onStageChange={handleStageChange} userRole={userRole} />
+        <LeadTable leads={filteredLeads} onStageChange={handleStageChange} userRole={userRole} onRefreshLeads={fetchLeads} />
       )}
     </div>
   );

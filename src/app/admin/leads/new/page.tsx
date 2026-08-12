@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Save, Sparkles, Phone, User, Calendar, MapPin, Tag } from 'lucide-react';
-import { SERVICE_OPTIONS, LEAD_SOURCES, LEAD_TEMPERATURES, PIPELINE_STAGES } from '@/lib/constants';
+import { ArrowLeft, Save, Sparkles, Phone, User, Calendar, MapPin, Tag, Compass, HeartHandshake } from 'lucide-react';
+import { SERVICE_OPTIONS, LEAD_SOURCES, LEAD_TEMPERATURES, PIPELINE_STAGES, GENDER_OPTIONS, RELATION_OPTIONS, MARITAL_STATUS_OPTIONS, RASHI_OPTIONS } from '@/lib/constants';
 import { generatePreConsultReminders } from '@/lib/reminders';
 
 export default function CreateLeadPage() {
@@ -17,6 +17,18 @@ export default function CreateLeadPage() {
     city: '',
     state: '',
     country: 'India',
+    date_of_birth: '',
+    time_of_birth: '',
+    birth_place: '',
+    gender: 'male',
+    relation: 'self',
+    address: '',
+    pincode: '',
+    marital_status: 'single',
+    gotra: '',
+    rashi: '',
+    occupation: '',
+    kundali_notes: '',
     lead_source: 'website',
     lead_temperature: 'warm',
     service_interest: 'divine_consultation',
@@ -191,6 +203,148 @@ export default function CreateLeadPage() {
                   className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-xs focus:border-amber-500 outline-none"
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Section 2: Vedic Kundali & Profiling Data */}
+          <div className="space-y-4 pt-4 border-t border-slate-100 bg-amber-50/40 p-5 rounded-2xl border border-amber-200/60">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-amber-900 flex items-center gap-1.5">
+              <Compass className="w-4 h-4 text-amber-600" /> Vedic Kundali & Client Profiling Details
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Date of Birth (DOB)</label>
+                <input
+                  type="date"
+                  value={formData.date_of_birth}
+                  onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:border-amber-500 outline-none bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Exact Birth Time</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 07:45 AM or 19:30"
+                  value={formData.time_of_birth}
+                  onChange={(e) => setFormData({ ...formData, time_of_birth: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:border-amber-500 outline-none bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Birth Place (City, State)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Surat, Gujarat"
+                  value={formData.birth_place}
+                  onChange={(e) => setFormData({ ...formData, birth_place: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:border-amber-500 outline-none bg-white"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Gender</label>
+                <select
+                  value={formData.gender}
+                  onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:border-amber-500 outline-none bg-white"
+                >
+                  {GENDER_OPTIONS.map((g) => (
+                    <option key={g.key} value={g.key}>{g.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Relation for Session</label>
+                <select
+                  value={formData.relation}
+                  onChange={(e) => setFormData({ ...formData, relation: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:border-amber-500 outline-none bg-white"
+                >
+                  {RELATION_OPTIONS.map((r) => (
+                    <option key={r.key} value={r.key}>{r.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Marital Status</label>
+                <select
+                  value={formData.marital_status}
+                  onChange={(e) => setFormData({ ...formData, marital_status: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:border-amber-500 outline-none bg-white"
+                >
+                  {MARITAL_STATUS_OPTIONS.map((m) => (
+                    <option key={m.key} value={m.key}>{m.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Moon Rashi (Zodiac)</label>
+                <select
+                  value={formData.rashi}
+                  onChange={(e) => setFormData({ ...formData, rashi: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:border-amber-500 outline-none bg-white"
+                >
+                  <option value="">Unknown / Select Rashi</option>
+                  {RASHI_OPTIONS.map((r) => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Gotra</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Kashyap, Bharadwaj"
+                  value={formData.gotra}
+                  onChange={(e) => setFormData({ ...formData, gotra: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:border-amber-500 outline-none bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Occupation / Profession</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Software Engineer, Business Owner"
+                  value={formData.occupation}
+                  onChange={(e) => setFormData({ ...formData, occupation: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:border-amber-500 outline-none bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">Postal Address & Pincode</label>
+                <input
+                  type="text"
+                  placeholder="Street Address, Pincode"
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:border-amber-500 outline-none bg-white"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Kundali & Specific Chart Notes</label>
+              <textarea
+                rows={2}
+                placeholder="Notes on Lagna, Dasha periods, specific questions for consulting session..."
+                value={formData.kundali_notes}
+                onChange={(e) => setFormData({ ...formData, kundali_notes: e.target.value })}
+                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:border-amber-500 outline-none bg-white"
+              />
             </div>
           </div>
 

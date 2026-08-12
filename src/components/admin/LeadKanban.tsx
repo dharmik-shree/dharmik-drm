@@ -88,15 +88,23 @@ export function LeadKanban({ leads, onStageChange }: LeadKanbanProps) {
                             {tempInfo?.icon} {tempInfo?.label}
                           </span>
 
-                          <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
-                            lead.payment_status === 'full_paid'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : lead.payment_status === 'token_paid'
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-slate-100 text-slate-600'
-                          }`}>
-                            {lead.payment_status.replace('_', ' ')}
-                          </span>
+                          <div className="flex items-center gap-1">
+                            {lead.is_converted ? (
+                              <span className="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-800 rounded-full border border-emerald-300">
+                                Converted
+                              </span>
+                            ) : (
+                              <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full ${
+                                lead.payment_status === 'full_paid'
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : lead.payment_status === 'token_paid'
+                                  ? 'bg-amber-100 text-amber-800'
+                                  : 'bg-slate-100 text-slate-600'
+                              }`}>
+                                {lead.payment_status.replace('_', ' ')}
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         {/* Title & Phone */}
@@ -108,6 +116,11 @@ export function LeadKanban({ leads, onStageChange }: LeadKanbanProps) {
                             {lead.full_name}
                           </Link>
                           <p className="text-xs text-slate-500">{formatPhoneIN(lead.phone)} • {lead.city || 'India'}</p>
+                          {lead.rashi && (
+                            <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded mt-1 inline-block">
+                              🔮 {lead.rashi}
+                            </span>
+                          )}
                         </div>
 
                         {/* Service & Fee */}

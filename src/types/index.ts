@@ -66,7 +66,6 @@ export type ActivityType =
 export type ReminderType = 
   | 'pre_consult_15day'
   | 'pre_consult_5day'
-  | 'pre_consult_3day'
   | 'pre_consult_1day'
   | 'payment_due'
   | 'follow_up'
@@ -83,6 +82,24 @@ export type RemedyStatus = 'not_sent' | 'sent' | 'accepted' | 'declined';
 export type PujaStatus = 'not_booked' | 'booked' | 'in_progress' | 'completed';
 export type StoneStatus = 'not_decided' | 'ordered' | 'dispatched' | 'delivered';
 export type TestimonialStatus = 'not_collected' | 'collected' | 'published';
+
+export type Gender = 'male' | 'female' | 'other';
+export type CustomerRelation = 'self' | 'spouse' | 'child' | 'father' | 'mother' | 'business_partner' | 'other';
+export type MaritalStatus = 'single' | 'married' | 'divorced' | 'widowed' | 'other';
+
+export type Rashi = 
+  | 'Mesha (Aries)'
+  | 'Vrishabha (Taurus)'
+  | 'Mithuna (Gemini)'
+  | 'Karka (Cancer)'
+  | 'Simha (Leo)'
+  | 'Kanya (Virgo)'
+  | 'Tula (Libra)'
+  | 'Vrishchika (Scorpio)'
+  | 'Dhanu (Sagittarius)'
+  | 'Makara (Capricorn)'
+  | 'Kumbha (Aquarius)'
+  | 'Meena (Pisces)';
 
 export interface UserProfile {
   id: string;
@@ -139,6 +156,20 @@ export interface Lead {
   city?: string;
   state?: string;
   country?: string;
+  // Kundali & Profiling Fields
+  date_of_birth?: string;
+  time_of_birth?: string;
+  birth_place?: string;
+  gender?: Gender;
+  relation?: CustomerRelation;
+  address?: string;
+  pincode?: string;
+  marital_status?: MaritalStatus;
+  gotra?: string;
+  rashi?: string;
+  occupation?: string;
+  kundali_notes?: string;
+  // Lead Details
   lead_source: LeadSource;
   lead_temperature: LeadTemperature;
   service_interest: ServiceInterest;
@@ -212,6 +243,9 @@ export interface Reminder {
   lead_name?: string;
   lead_phone?: string;
   service_name?: string;
+  date_of_consultation?: string;
+  consultation_mode?: string;
+  amount_due?: number;
   reminder_type: ReminderType;
   scheduled_for: string;
   channel: ReminderChannel;
@@ -231,6 +265,22 @@ export interface CustomerRecord {
   phone: string;
   email?: string;
   city?: string;
+  state?: string;
+  country?: string;
+  // Kundali & Profiling Fields
+  date_of_birth?: string;
+  time_of_birth?: string;
+  birth_place?: string;
+  gender?: Gender;
+  relation?: CustomerRelation;
+  address?: string;
+  pincode?: string;
+  marital_status?: MaritalStatus;
+  gotra?: string;
+  rashi?: string;
+  occupation?: string;
+  kundali_notes?: string;
+  // Business fields
   customer_since: string;
   total_spent: number;
   total_sessions: number;

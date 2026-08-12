@@ -61,10 +61,48 @@ export const LEAD_TEMPERATURES: { key: LeadTemperature; label: string; badgeClas
   { key: 'cold', label: 'Cold Lead', badgeClass: 'bg-blue-500/10 text-blue-600 border-blue-200', icon: '🔵' },
 ];
 
+export const GENDER_OPTIONS = [
+  { key: 'male', label: 'Male' },
+  { key: 'female', label: 'Female' },
+  { key: 'other', label: 'Other' },
+];
+
+export const RELATION_OPTIONS = [
+  { key: 'self', label: 'Self (Myself)' },
+  { key: 'spouse', label: 'Spouse (Husband/Wife)' },
+  { key: 'child', label: 'Child (Son/Daughter)' },
+  { key: 'father', label: 'Father' },
+  { key: 'mother', label: 'Mother' },
+  { key: 'business_partner', label: 'Business Partner' },
+  { key: 'other', label: 'Other Relative' },
+];
+
+export const MARITAL_STATUS_OPTIONS = [
+  { key: 'single', label: 'Single / Unmarried' },
+  { key: 'married', label: 'Married' },
+  { key: 'divorced', label: 'Divorced' },
+  { key: 'widowed', label: 'Widowed' },
+  { key: 'other', label: 'Other' },
+];
+
+export const RASHI_OPTIONS = [
+  'Mesha (Aries)',
+  'Vrishabha (Taurus)',
+  'Mithuna (Gemini)',
+  'Karka (Cancer)',
+  'Simha (Leo)',
+  'Kanya (Virgo)',
+  'Tula (Libra)',
+  'Vrishchika (Scorpio)',
+  'Dhanu (Sagittarius)',
+  'Makara (Capricorn)',
+  'Kumbha (Aquarius)',
+  'Meena (Pisces)',
+];
+
 export const DEFAULT_WHATSAPP_TEMPLATES = {
   pre_consult_15day: `नमस्ते {{name}} 🙏 Dharmikshree की तरफ से आपको याद दिलाना चाहते हैं कि आपकी {{service}} consultation {{date}} को scheduled है। किसी भी प्रश्न के लिए हमसे संपर्क करें। — Team Dharmikshree`,
   pre_consult_5day: `नमस्ते {{name}} 🙏 आपकी {{service}} consultation 5 दिन बाद — {{date}} को scheduled है। कृपया हमें confirm करें। Mode: {{mode}}. — Team Dharmikshree`,
-  pre_consult_3day: `नमस्ते {{name}} 🙏 आपकी {{service}} consultation अब सिर्फ 3 दिन दूर है — {{date}} को। कृपया confirm करें कि आप available हैं। Mode: {{mode}}. — Team Dharmikshree`,
   pre_consult_1day: `नमस्ते {{name}} 🙏 Reminder: आपकी consultation कल {{date}} को है। Online link/details team द्वारा जल्द share की जाएगी। — Team Dharmikshree`,
   payment_due: `नमस्ते {{name}} 🙏 आपकी service {{service}} के लिए ₹{{amount}} की pending payment है। Payment receipt & slot confirmation के लिए कृपया जल्द complete करें। — Team Dharmikshree`,
   protocol_sent: `नमस्ते {{name}} 🙏 Payment received! आपकी consultation details capture हो गई हैं। Team Dharmikshree जल्द आपसे slot finalization के लिए coordinate करेगी।`,

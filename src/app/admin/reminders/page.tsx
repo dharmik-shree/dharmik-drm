@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   BellRing,
   CheckCircle2,
@@ -13,9 +14,10 @@ import {
   MessageSquare,
   ChevronRight,
   Edit3,
+  ExternalLink,
 } from 'lucide-react';
-import { DEFAULT_WHATSAPP_TEMPLATES } from '@/lib/constants';
-import { formatDateIN, formatPhoneIN } from '@/lib/formatters';
+import { DEFAULT_WHATSAPP_TEMPLATES, SERVICE_OPTIONS } from '@/lib/constants';
+import { formatDateIN, formatDateTimeIN, formatPhoneIN } from '@/lib/formatters';
 import { generateWhatsAppLink } from '@/lib/whatsapp';
 import { UserRole, Reminder } from '@/types';
 
@@ -107,16 +109,46 @@ export default function RemindersPage() {
       ? upcomingList
       : reminders;
 
+  const getBadgeStyle = (type: string) => {
+    switch (type) {
+      case 'pre_consult_15day':
+        return 'bg-blue-100 text-blue-900 border-blue-300';
+      case 'pre_consult_5day':
+        return 'bg-amber-100 text-amber-900 border-amber-300';
+      case 'pre_consult_1day':
+        return 'bg-purple-100 text-purple-900 border-purple-300';
+      case 'payment_due':
+        return 'bg-red-100 text-red-900 border-red-300';
+      default:
+        return 'bg-slate-100 text-slate-800 border-slate-300';
+    }
+  };
+
+  const getBadgeLabel = (type: string) => {
+    switch (type) {
+      case 'pre_consult_15day':
+        return '15-Day Reminder';
+      case 'pre_consult_5day':
+        return '5-Day Reminder';
+      case 'pre_consult_1day':
+        return '1-Day Final Confirmation';
+      case 'payment_due':
+        return 'Payment Due';
+      default:
+        return type.replace(/_/g, ' ');
+    }
+  };
+
   return (
     <div className="space-y-8 pb-16">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
           <h1 className="text-2xl font-bold font-serif-heading text-[#1A3C5E]">
-            Automated Reminders & Daily Agenda Engine
+            Today's Action Agenda & Reminder Engine
           </h1>
           <p className="text-slate-500 text-xs">
-            Pre-consultation 15-day, 5-day, 3-day, 1-day reminders, payment follow-ups & WhatsApp templates.
+            Pre-consultation 15-day, 5-day, and 1-day reminders, payment follow-ups & WhatsApp templates.
           </p>
         </div>
 
@@ -128,7 +160,7 @@ export default function RemindersPage() {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex border-b border-slate-200 gap-4 sm:gap-8 bg-white p-2 rounded-2xl shadow-xs border border-slate-200 overflow-x-auto">
+      <div className="flex border-b border-slate-200 gap-3 bg-white p-2 rounded-2xl shadow-xs border border-slate-200 overflow-x-auto">
         <button
           onClick={() => setActiveTab('today')}
           className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 shrink-0 ${
@@ -136,7 +168,7 @@ export default function RemindersPage() {
           }`}
         >
           <BellRing className="w-4 h-4" />
-          Today's Tasks ({todayList.length})
+          Today's Action Agenda ({todayList.length})
         </button>
 
         <button
@@ -175,7 +207,7 @@ export default function RemindersPage() {
               activeTab === 'templates' ? 'bg-amber-500 text-slate-950 shadow' : 'text-slate-600 hover:bg-slate-50'
             }`}
           >
-            <Edit3 className="w-3.5 h-3.5" /> Message Templates
+            <Edit3 className="w-3.5 h-3.5" /> WhatsApp Templates
           </button>
         )}
       </div>
@@ -184,8 +216,8 @@ export default function RemindersPage() {
       {activeTab === 'templates' ? (
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-6">
           <div className="border-b border-amber-100 pb-3">
-            <h3 className="font-bold text-base text-[#1A3C5E]">Pre-built WhatsApp & Email Message Templates</h3>
-            <p className="text-xs text-slate-500">Super admin can customize automated reminder text templates</p>
+            <h3 className="font-bold text-base text-[#1A3C5E]">Pre-built WhatsApp Message Templates</h3>
+            <p className="text-xs text-slate-500">Super admin can customize 15-day, 5-day, and 1-day reminder text templates</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -219,11 +251,12 @@ export default function RemindersPage() {
             <div className="bg-white p-12 rounded-2xl border border-slate-200 text-center space-y-2">
               <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
               <p className="font-bold text-slate-800 text-base">All clear! No reminders in this filter.</p>
-              <p className="text-xs text-slate-400">New leads & consultation dates auto-generate reminders.</p>
+              <p className="text-xs text-slate-400">Consultation dates automatically generate 15-day, 5-day, and 1-day pre-consult reminders.</p>
             </div>
           ) : (
             currentList.map((rem) => {
-              const waLink = generateWhatsAppLink(rem.lead_phone || '9876543210', rem.message_template || rem.notes || '');
+              const waText = rem.message_template || rem.notes || '';
+              const waLink = `https://wa.me/${(rem.lead_phone || '').replace(/\D/g, '')}?text=${encodeURIComponent(waText)}`;
 
               return (
                 <div
@@ -236,35 +269,47 @@ export default function RemindersPage() {
                       : 'border-slate-200 hover:border-amber-400'
                   }`}
                 >
-                  <div className="space-y-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="px-2.5 py-0.5 text-[10px] font-bold uppercase rounded-full bg-amber-100 text-amber-900 border border-amber-200">
-                        {rem.reminder_type.replace(/_/g, ' ')}
+                  <div className="space-y-2.5 min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`px-2.5 py-0.5 text-[10px] font-bold uppercase rounded-full border ${getBadgeStyle(rem.reminder_type)}`}>
+                        {getBadgeLabel(rem.reminder_type)}
                       </span>
-                      <span className="font-bold text-sm text-slate-900 truncate">{rem.lead_name}</span>
-                      <span className="text-xs text-slate-400">({rem.service_name})</span>
+                      <Link href={`/admin/leads/${rem.lead_id}`} className="font-bold text-sm text-slate-900 hover:text-amber-600 transition truncate">
+                        {rem.lead_name}
+                      </Link>
+                      <span className="text-xs text-slate-500 font-medium">({rem.service_name})</span>
                     </div>
 
-                    <p className="text-xs text-slate-700 bg-slate-50/80 p-2.5 rounded-xl border border-slate-100">
-                      {rem.message_template || rem.notes}
-                    </p>
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs text-slate-800 space-y-1">
+                      <p className="leading-relaxed font-sans">{rem.message_template || rem.notes}</p>
+                    </div>
 
-                    <div className="flex items-center gap-4 text-[11px] text-slate-400 pt-1">
-                      <span>Scheduled: {formatDateIN(rem.scheduled_for)}</span>
-                      <span>Assigned: {rem.assigned_to_user?.full_name || 'Team'}</span>
+                    <div className="flex flex-wrap items-center gap-4 text-[11px] text-slate-500">
+                      <span>Scheduled: <strong>{formatDateIN(rem.scheduled_for)}</strong></span>
+                      {rem.date_of_consultation && (
+                        <span className="text-purple-800 font-bold">Consultation Date: {formatDateIN(rem.date_of_consultation)}</span>
+                      )}
+                      <span>Assigned: <strong>{rem.assigned_to_user?.full_name || 'Team'}</strong></span>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex flex-wrap items-center gap-2 shrink-0 sm:self-center">
                     {rem.status !== 'done' && (
                       <>
                         <a
                           href={waLink}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow transition flex items-center gap-1"
+                          className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5"
                         >
                           <MessageSquare className="w-3.5 h-3.5" /> Send WhatsApp
+                        </a>
+
+                        <a
+                          href={`tel:${rem.lead_phone}`}
+                          className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-xl transition flex items-center gap-1"
+                        >
+                          <PhoneCall className="w-3.5 h-3.5 text-slate-600" /> Call
                         </a>
 
                         <button
@@ -277,7 +322,7 @@ export default function RemindersPage() {
 
                         <button
                           onClick={() => handleMarkDone(rem.id)}
-                          className="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl shadow transition flex items-center gap-1"
+                          className="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5"
                         >
                           <CheckCircle2 className="w-3.5 h-3.5" /> Mark Done
                         </button>
@@ -285,8 +330,8 @@ export default function RemindersPage() {
                     )}
 
                     {rem.status === 'done' && (
-                      <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl">
-                        ✓ Completed
+                      <span className="text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-3.5 py-2 rounded-xl flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Completed
                       </span>
                     )}
                   </div>
