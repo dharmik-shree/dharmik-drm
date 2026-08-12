@@ -44,18 +44,6 @@ export async function POST(request: Request) {
       consultation_mode,
       message,
       lead_source,
-      date_of_birth,
-      time_of_birth,
-      birth_place,
-      gender,
-      relation,
-      address,
-      pincode,
-      marital_status,
-      gotra,
-      rashi,
-      occupation,
-      kundali_notes,
     } = body;
 
     if (!full_name || !phone || !city) {
@@ -64,26 +52,12 @@ export async function POST(request: Request) {
 
     const supabase = createAdminClient();
 
-    const newLeadRecord = {
+    const coreLeadRecord: Record<string, any> = {
       full_name,
       phone,
       whatsapp: phone,
-      email: email || null,
       city,
-      address: address || null,
-      pincode: pincode || null,
-      state: null,
       country: 'India',
-      date_of_birth: date_of_birth || null,
-      time_of_birth: time_of_birth || null,
-      birth_place: birth_place || null,
-      gender: gender || null,
-      relation: relation || 'self',
-      marital_status: marital_status || null,
-      gotra: gotra || null,
-      rashi: rashi || null,
-      occupation: occupation || null,
-      kundali_notes: kundali_notes || null,
       lead_source: lead_source || 'website',
       lead_temperature: 'warm' as const,
       service_interest: service_interest || 'divine_consultation',
@@ -97,20 +71,39 @@ export async function POST(request: Request) {
       reschedule_count: 0,
       protocol_message_sent: false,
       pre_consult_5day_done: false,
-      pre_consult_3day_done: false,
       remedy_status: 'not_sent' as const,
       puja_status: 'not_booked' as const,
       stone_status: 'not_decided' as const,
       testimonial_status: 'not_collected' as const,
-      internal_notes: message ? `Website Note: ${message}` : null,
       tags: ['Website Lead'],
       is_converted: false,
       updated_at: new Date().toISOString(),
     };
 
-    const { data, error } = await supabase.from('leads').insert([newLeadRecord]).select().single();
+    if (email) coreLeadRecord.email = email;
+    if (message) coreLeadRecord.internal_notes = `Website Note: ${message}`;
+
+    const extendedRecord = { ...coreLeadRecord };
+    if (body.date_of_birth) extendedRecord.date_of_birth = body.date_of_birth;
+    if (body.time_of_birth) extendedRecord.time_of_birth = body.time_of_birth;
+    if (body.birth_place) extendedRecord.birth_place = body.birth_place;
+    if (body.gender) extendedRecord.gender = body.gender;
+    if (body.relation) extendedRecord.relation = body.relation;
+    if (body.address) extendedRecord.address = body.address;
+    if (body.pincode) extendedRecord.pincode = body.pincode;
+    if (body.marital_status) extendedRecord.marital_status = body.marital_status;
+    if (body.gotra) extendedRecord.gotra = body.gotra;
+    if (body.rashi) extendedRecord.rashi = body.rashi;
+    if (body.occupation) extendedRecord.occupation = body.occupation;
+    if (body.kundali_notes) extendedRecord.kundali_notes = body.kundali_notes;
+
+    let { data, error } = await supabase.from('leads').insert([extendedRecord]).select().single();
+
     if (error) {
-      throw error;
+      // Fallback to core fields if extended columns are not yet in schema cache
+      const retry = await supabase.from('leads').insert([coreLeadRecord]).select().single();
+      if (retry.error) throw retry.error;
+      data = retry.data;
     }
 
     // Activity log
