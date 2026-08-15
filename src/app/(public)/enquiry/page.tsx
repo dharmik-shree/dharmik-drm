@@ -6,8 +6,13 @@ export const metadata = {
   description: 'Book your Vedic Astrology consultation, Vastu space assessment, or life mentorship session with Dharmikshree.',
 };
 
-export default function EnquiryPage({ searchParams }: { searchParams: { embed?: string } }) {
-  const isEmbed = searchParams.embed === 'true';
+export default async function EnquiryPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ embed?: string }>;
+}) {
+  const resolvedSearchParams = await searchParams;
+  const isEmbed = resolvedSearchParams?.embed === 'true';
 
   if (isEmbed) {
     return (
