@@ -427,7 +427,6 @@ export default function AdminKundaliPage() {
                   required
                   value={formData.birthPlace}
                   onChange={handleChange}
-                  placeholder="e.g. Sanosara, Gujarat, India"
                   className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 outline-none focus:border-amber-500"
                 />
               </div>
