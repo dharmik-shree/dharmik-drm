@@ -59,6 +59,12 @@ export function AdminSidebar({ userRole, userName }: AdminSidebarProps) {
       roles: ['super_admin', 'admin', 'team_member'],
     },
     {
+      label: 'Kundali Generator',
+      href: '/admin/kundali',
+      icon: Sparkles,
+      roles: ['super_admin', 'admin', 'team_member'],
+    },
+    {
       label: 'Team Management',
       href: '/admin/team',
       icon: UserCog,
