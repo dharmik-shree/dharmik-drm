@@ -97,13 +97,51 @@ export async function POST(request: Request) {
     if (body.occupation) extendedRecord.occupation = body.occupation;
     if (body.kundali_notes) extendedRecord.kundali_notes = body.kundali_notes;
 
-    let { data, error } = await supabase.from('leads').insert([extendedRecord]).select().single();
+    // Deduplication check: if active unconverted lead exists for phone/email, update it instead of creating duplicate
+    const matchFilters = [`phone.eq.${phone}`];
+    if (email) matchFilters.push(`email.eq.${email}`);
 
-    if (error) {
-      // Fallback to core fields if extended columns are not yet in schema cache
-      const retry = await supabase.from('leads').insert([coreLeadRecord]).select().single();
-      if (retry.error) throw retry.error;
-      data = retry.data;
+    const { data: existingLeads } = await supabase
+      .from('leads')
+      .select('id')
+      .or(matchFilters.join(','))
+      .eq('is_converted', false)
+      .is('deleted_at', null)
+      .limit(1);
+
+    let data: any = null;
+
+    if (existingLeads && existingLeads.length > 0) {
+      const existingId = existingLeads[0].id;
+      const { data: updated, error: updateErr } = await supabase
+        .from('leads')
+        .update({ ...extendedRecord, updated_at: new Date().toISOString() })
+        .eq('id', existingId)
+        .select()
+        .single();
+
+      if (updateErr) {
+        const retry = await supabase
+          .from('leads')
+          .update({ ...coreLeadRecord, updated_at: new Date().toISOString() })
+          .eq('id', existingId)
+          .select()
+          .single();
+        if (retry.error) throw retry.error;
+        data = retry.data;
+      } else {
+        data = updated;
+      }
+    } else {
+      let { data: inserted, error } = await supabase.from('leads').insert([extendedRecord]).select().single();
+
+      if (error) {
+        const retry = await supabase.from('leads').insert([coreLeadRecord]).select().single();
+        if (retry.error) throw retry.error;
+        data = retry.data;
+      } else {
+        data = inserted;
+      }
     }
 
     // Activity log

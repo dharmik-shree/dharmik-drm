@@ -1,15 +1,41 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Sparkles, Calendar, MessageSquare, Video, CheckCircle2, ArrowRight } from 'lucide-react';
-import { INITIAL_CUSTOMERS, INITIAL_LEADS } from '@/lib/mock-data';
-import { formatDateIN, formatPhoneIN } from '@/lib/formatters';
+import { formatDateIN } from '@/lib/formatters';
 import { BUSINESS_INFO } from '@/lib/constants';
 
 export default function CustomerDashboardPage() {
-  const customer = INITIAL_CUSTOMERS[0];
-  const demoLead = INITIAL_LEADS[0]; // Rajesh Sharma
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/api/portal/me')
+      .then((res) => res.json())
+      .then((resData) => {
+        if (resData.success) setData(resData);
+      })
+      .catch((err) => console.error('Failed to fetch portal me:', err))
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="py-20 text-center text-slate-400 font-serif space-y-2">
+        <Sparkles className="w-6 h-6 animate-spin mx-auto text-amber-500" />
+        <p>Loading your personal spiritual portal...</p>
+      </div>
+    );
+  }
+
+  const profile = data?.profile || {
+    full_name: 'Valued Client',
+    city: 'India',
+    service_interest: 'Divine Consultation',
+  };
+
+  const lead = data?.lead;
 
   return (
     <div className="space-y-6 pb-12">
@@ -20,7 +46,7 @@ export default function CustomerDashboardPage() {
           Vedic Blessings & Divine Wisdom
         </div>
         <h1 className="text-2xl sm:text-4xl font-bold font-serif-heading text-amber-100">
-          नमस्ते {customer.full_name} 🙏
+          नमस्ते {profile.full_name} 🙏
         </h1>
         <p className="text-amber-100/90 text-sm max-w-xl leading-relaxed font-serif">
           Welcome to your personal spiritual journey dashboard with Dharmikshree. View your consultation milestones, remedies, and upcoming sessions below.
@@ -33,18 +59,21 @@ export default function CustomerDashboardPage() {
         <div className="bg-white p-6 rounded-3xl border border-amber-200 shadow-md space-y-4">
           <div className="flex items-center justify-between border-b border-amber-100 pb-3">
             <span className="text-xs font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
-              <Calendar className="w-4 h-4 text-amber-600" /> Upcoming Consultation
+              <Calendar className="w-4 h-4 text-amber-600" /> Active Guidance Session
             </span>
             <span className="px-2.5 py-0.5 text-[10px] font-bold bg-purple-100 text-purple-800 rounded-full">
-              Confirmed Slot
+              {lead?.stage?.replace(/_/g, ' ').toUpperCase() || 'CONFIRMED'}
             </span>
           </div>
 
           <div className="space-y-2">
-            <h3 className="text-lg font-bold text-[#1A3C5E] font-serif-heading">Divine Consultation</h3>
+            <h3 className="text-lg font-bold text-[#1A3C5E] font-serif-heading capitalize">
+              {(profile.service_interest || 'Divine Consultation').replace(/_/g, ' ')}
+            </h3>
             <div className="p-3 bg-purple-50 rounded-2xl border border-purple-100 space-y-1 text-xs text-purple-900 font-semibold">
-              <p>📅 Date: {formatDateIN(demoLead.date_of_consultation)}</p>
-              <p>⏰ Mode: Online (Zoom Video Conference)</p>
+              <p>📅 Date: {profile.date_of_consultation ? formatDateIN(profile.date_of_consultation) : 'Scheduled with Pandits'}</p>
+              <p>⏰ Mode: {profile.consultation_mode === 'online' ? 'Online (Zoom Video Conference)' : 'In-Person Consultation'}</p>
+              {profile.rashi && <p>✨ Vedic Rashi: {profile.rashi}</p>}
             </div>
           </div>
 
@@ -69,7 +98,7 @@ export default function CustomerDashboardPage() {
           </div>
 
           <p className="text-xs text-slate-600 leading-relaxed font-serif">
-            Have questions regarding your Kundali chart or upcoming Mahapuja timing? Connect directly with Team Dharmikshree.
+            Have questions regarding your Kundali chart, remedies, or upcoming Mahapuja timing? Connect directly with Team Dharmikshree.
           </p>
 
           <a
@@ -96,8 +125,12 @@ export default function CustomerDashboardPage() {
           <div className="flex items-center gap-3 p-3 bg-emerald-50/60 rounded-2xl border border-emerald-100">
             <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
             <div>
-              <p className="font-bold text-slate-900">Divine Consultation — Completed</p>
-              <span className="text-slate-500 text-[11px]">Personal Kundali overview and Mahadasha guidance provided.</span>
+              <p className="font-bold text-slate-900">
+                {(profile.service_interest || 'Divine Consultation').replace(/_/g, ' ')} — Client Profile Active
+              </p>
+              <span className="text-slate-500 text-[11px]">
+                {profile.conclusion_notes || 'Personal Kundali overview and Mahadasha guidance recorded.'}
+              </span>
             </div>
           </div>
         </div>

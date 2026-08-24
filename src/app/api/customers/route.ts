@@ -7,7 +7,7 @@ export async function GET() {
     const supabase = createAdminClient();
     const { data: customers, error } = await supabase
       .from('customers')
-      .select('*, user:users!id(id, full_name, phone, whatsapp, email, avatar_url), lead:leads!lead_id(city, state, country, lead_source)')
+      .select('*, user:users!id(id, full_name, phone, whatsapp, role, avatar_url), lead:leads!lead_id(*)')
       .order('customer_since', { ascending: false });
 
     if (error) throw error;
@@ -15,29 +15,29 @@ export async function GET() {
     const formatted = (customers || []).map((c: any) => ({
       id: c.id,
       lead_id: c.lead_id,
-      full_name: c.user?.full_name || 'Client',
-      phone: c.user?.phone || c.user?.whatsapp || '',
-      email: c.user?.email || null,
-      city: c.lead?.city || c.address || 'India',
+      full_name: c.user?.full_name || c.lead?.full_name || 'Client',
+      phone: c.user?.phone || c.user?.whatsapp || c.lead?.phone || '',
+      email: c.lead?.email || null,
+      city: c.lead?.city || 'India',
       state: c.lead?.state || null,
       country: c.lead?.country || 'India',
-      date_of_birth: c.date_of_birth,
-      time_of_birth: c.time_of_birth,
-      birth_place: c.birth_place,
-      gender: c.gender,
-      relation: c.relation || 'self',
-      address: c.address,
-      pincode: c.pincode,
-      marital_status: c.marital_status,
-      gotra: c.gotra,
-      rashi: c.rashi,
-      occupation: c.occupation,
-      kundali_notes: c.kundali_notes,
+      date_of_birth: c.lead?.date_of_birth || null,
+      time_of_birth: c.lead?.time_of_birth || null,
+      birth_place: c.lead?.birth_place || null,
+      gender: c.lead?.gender || null,
+      relation: c.lead?.relation || 'self',
+      address: c.lead?.address || null,
+      pincode: c.lead?.pincode || null,
+      marital_status: c.lead?.marital_status || null,
+      gotra: c.lead?.gotra || null,
+      rashi: c.lead?.rashi || null,
+      occupation: c.lead?.occupation || null,
+      kundali_notes: c.lead?.kundali_notes || null,
       lead_source: c.lead?.lead_source || 'direct',
       customer_since: c.customer_since,
       total_spent: c.total_spent || 0,
       total_sessions: c.total_sessions || 1,
-      notes: c.notes,
+      notes: c.notes || c.lead?.internal_notes || null,
       tags: c.tags || [],
     }));
 
@@ -86,21 +86,70 @@ export async function POST(request: Request) {
 
     let customerUserId: string | null = null;
 
-    try {
-      const { data: authUser } = await supabase.auth.admin.createUser({
-        email: emailToUse,
-        password: `Client@${Math.floor(100000 + Math.random() * 900000)}`,
-        email_confirm: true,
-        user_metadata: { full_name, phone },
-      });
-      if (authUser?.user) customerUserId = authUser.user.id;
-    } catch {
-      // Fallback
+    const { data: listData } = await supabase.auth.admin.listUsers();
+    if (listData?.users) {
+      const existing = listData.users.find(
+        (u) =>
+          (u.email && u.email.toLowerCase() === emailToUse.toLowerCase()) ||
+          (phone && u.user_metadata?.phone === phone)
+      );
+      if (existing) customerUserId = existing.id;
     }
 
-    if (!customerUserId) customerUserId = crypto.randomUUID();
+    if (!customerUserId) {
+      try {
+        const { data: authUser, error: authErr } = await supabase.auth.admin.createUser({
+          email: emailToUse,
+          password: `Client@${Math.floor(100000 + Math.random() * 900000)}`,
+          email_confirm: true,
+          user_metadata: { full_name, phone },
+        });
+        if (authUser?.user) {
+          customerUserId = authUser.user.id;
+        } else if (authErr && authErr.message.includes('already been registered')) {
+          const { data: listData2 } = await supabase.auth.admin.listUsers();
+          const existing = listData2?.users?.find(
+            (u) => u.email && u.email.toLowerCase() === emailToUse.toLowerCase()
+          );
+          if (existing) customerUserId = existing.id;
+        }
+      } catch {
+        // Fallback
+      }
+    }
 
-    // 1. User profile
+    if (!customerUserId) {
+      return NextResponse.json({ error: 'Failed to find or create customer authentication account' }, { status: 500 });
+    }
+
+    // 1. Create a lead record first to store Kundali profiling details
+    const { data: newLead } = await supabase.from('leads').insert([{
+      full_name,
+      phone,
+      whatsapp: whatsapp || phone,
+      email: email || null,
+      city: city || null,
+      state: state || null,
+      country: country || 'India',
+      date_of_birth: date_of_birth || null,
+      time_of_birth: time_of_birth || null,
+      birth_place: birth_place || null,
+      gender: gender || null,
+      relation: relation || 'self',
+      address: address || null,
+      pincode: pincode || null,
+      marital_status: marital_status || null,
+      gotra: gotra || null,
+      rashi: rashi || null,
+      occupation: occupation || null,
+      kundali_notes: kundali_notes || null,
+      lead_source: 'direct',
+      stage: 'won_testimonial',
+      is_converted: true,
+      converted_customer_id: customerUserId,
+    }]).select().single();
+
+    // 2. User profile (Core schema compatible)
     await supabase.from('users').upsert([{
       id: customerUserId,
       full_name,
@@ -108,40 +157,17 @@ export async function POST(request: Request) {
       whatsapp: whatsapp || phone,
       role: 'customer',
       is_active: true,
-      date_of_birth: date_of_birth || null,
-      time_of_birth: time_of_birth || null,
-      birth_place: birth_place || null,
-      gender: gender || null,
-      relation: relation || 'self',
-      address: address || null,
-      pincode: pincode || null,
-      marital_status: marital_status || null,
-      gotra: gotra || null,
-      rashi: rashi || null,
-      occupation: occupation || null,
-      kundali_notes: kundali_notes || null,
     }]);
 
-    // 2. Customer record
+    // 3. Customer record (Core schema compatible)
     const { data: customer, error: custErr } = await supabase.from('customers').upsert([{
       id: customerUserId,
+      lead_id: newLead?.id || null,
       customer_since: new Date().toISOString().split('T')[0],
       total_spent: 0,
       total_sessions: 1,
       notes: notes || null,
       tags: Array.isArray(tags) ? tags : ['Direct Customer'],
-      date_of_birth: date_of_birth || null,
-      time_of_birth: time_of_birth || null,
-      birth_place: birth_place || null,
-      gender: gender || null,
-      relation: relation || 'self',
-      address: address || null,
-      pincode: pincode || null,
-      marital_status: marital_status || null,
-      gotra: gotra || null,
-      rashi: rashi || null,
-      occupation: occupation || null,
-      kundali_notes: kundali_notes || null,
     }]).select('*').single();
 
     if (custErr) throw custErr;

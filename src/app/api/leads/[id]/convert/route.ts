@@ -27,32 +27,57 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       });
     }
 
-    // 2. Prepare user email & auth account if possible
+    // 2. Prepare user email & auth account safely
     const cleanPhone = lead.phone ? lead.phone.replace(/\D/g, '') : '';
     const emailToUse = lead.email || `client_${cleanPhone || Date.now()}@dharmikshree.com`;
 
     let customerUserId: string | null = null;
 
-    try {
-      const { data: authUser, error: authErr } = await supabase.auth.admin.createUser({
-        email: emailToUse,
-        password: `Client@${Math.floor(100000 + Math.random() * 900000)}`,
-        email_confirm: true,
-        user_metadata: { full_name: lead.full_name, phone: lead.phone },
-      });
-
-      if (!authErr && authUser?.user) {
-        customerUserId = authUser.user.id;
+    // Check if auth user already exists by email or phone
+    const { data: listData } = await supabase.auth.admin.listUsers();
+    if (listData?.users) {
+      const existing = listData.users.find(
+        (u) =>
+          (u.email && u.email.toLowerCase() === emailToUse.toLowerCase()) ||
+          (lead.phone && u.user_metadata?.phone === lead.phone)
+      );
+      if (existing) {
+        customerUserId = existing.id;
       }
-    } catch {
-      // Fallback if admin auth creation is unavailable
+    }
+
+    // If not found in list, attempt creation
+    if (!customerUserId) {
+      try {
+        const { data: authUser, error: authErr } = await supabase.auth.admin.createUser({
+          email: emailToUse,
+          password: `Client@${Math.floor(100000 + Math.random() * 900000)}`,
+          email_confirm: true,
+          user_metadata: { full_name: lead.full_name, phone: lead.phone },
+        });
+
+        if (authUser?.user) {
+          customerUserId = authUser.user.id;
+        } else if (authErr && authErr.message.includes('already been registered')) {
+          const { data: listData2 } = await supabase.auth.admin.listUsers();
+          const existing = listData2?.users?.find(
+            (u) => u.email && u.email.toLowerCase() === emailToUse.toLowerCase()
+          );
+          if (existing) customerUserId = existing.id;
+        }
+      } catch {
+        // Fallback
+      }
     }
 
     if (!customerUserId) {
-      customerUserId = crypto.randomUUID();
+      return NextResponse.json(
+        { error: 'Could not create or find authenticating user for customer' },
+        { status: 500 }
+      );
     }
 
-    // 3. Upsert user in public.users table
+    // 3. Upsert user in public.users table (Core schema compatible)
     const userPayload = {
       id: customerUserId,
       full_name: lead.full_name,
@@ -60,24 +85,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       whatsapp: lead.whatsapp || lead.phone,
       role: 'customer',
       is_active: true,
-      date_of_birth: lead.date_of_birth || null,
-      time_of_birth: lead.time_of_birth || null,
-      birth_place: lead.birth_place || null,
-      gender: lead.gender || null,
-      relation: lead.relation || 'self',
-      address: lead.address || null,
-      pincode: lead.pincode || null,
-      marital_status: lead.marital_status || null,
-      gotra: lead.gotra || null,
-      rashi: lead.rashi || null,
-      occupation: lead.occupation || null,
-      kundali_notes: lead.kundali_notes || null,
     };
 
     const { error: userErr } = await supabase.from('users').upsert([userPayload]);
     if (userErr) throw new Error(`Failed to create user record: ${userErr.message}`);
 
-    // 4. Create customer record in public.customers
+    // 4. Create customer record in public.customers (Core schema compatible)
     const customerPayload = {
       id: customerUserId,
       lead_id: lead.id,
@@ -86,18 +99,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       total_sessions: 1,
       notes: lead.internal_notes || null,
       tags: lead.tags || ['Converted Client'],
-      date_of_birth: lead.date_of_birth || null,
-      time_of_birth: lead.time_of_birth || null,
-      birth_place: lead.birth_place || null,
-      gender: lead.gender || null,
-      relation: lead.relation || 'self',
-      address: lead.address || null,
-      pincode: lead.pincode || null,
-      marital_status: lead.marital_status || null,
-      gotra: lead.gotra || null,
-      rashi: lead.rashi || null,
-      occupation: lead.occupation || null,
-      kundali_notes: lead.kundali_notes || null,
     };
 
     const { error: custErr } = await supabase.from('customers').upsert([customerPayload]);
@@ -117,6 +118,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       .single();
 
     if (leadUpdateErr) throw leadUpdateErr;
+
+    // Also mark matching duplicate leads (same phone or email) as converted
+    if (lead.phone || lead.email) {
+      const matchConds: string[] = [];
+      if (lead.phone) matchConds.push(`phone.eq.${lead.phone}`);
+      if (lead.email) matchConds.push(`email.eq.${lead.email}`);
+      await supabase
+        .from('leads')
+        .update({
+          is_converted: true,
+          converted_customer_id: customerUserId,
+          updated_at: new Date().toISOString(),
+        })
+        .or(matchConds.join(','))
+        .eq('is_converted', false);
+    }
 
     // 6. Log system activity
     await supabase.from('lead_activities').insert({
