@@ -318,18 +318,18 @@ export default function LeadDetailPage() {
   return (
     <div className="space-y-6 pb-16">
       {/* Top Header Navigation */}
-      <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-4 gap-3 sm:gap-4">
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.push('/admin/leads')}
-            className="p-2 text-slate-500 hover:text-slate-900 bg-white border border-slate-200 rounded-xl transition"
+            className="p-2 text-slate-500 hover:text-slate-900 bg-white border border-slate-200 rounded-xl transition cursor-pointer shrink-0"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
 
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold font-serif-heading text-[#1A3C5E]">{lead.full_name}</h1>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-lg sm:text-xl font-bold font-serif-heading text-[#1A3C5E]">{lead.full_name}</h1>
               <span className={`px-2 py-0.5 text-[10px] font-bold rounded-full border ${tempInfo?.badgeClass}`}>
                 {tempInfo?.icon} {tempInfo?.label}
               </span>
@@ -338,18 +338,18 @@ export default function LeadDetailPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           {lead.is_converted ? (
-            <span className="px-3.5 py-2 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-xl border border-emerald-300 flex items-center gap-1.5">
+            <span className="flex-1 sm:flex-none justify-center px-3.5 py-2 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-xl border border-emerald-300 flex items-center gap-1.5">
               <UserCheck className="w-4 h-4 text-emerald-600" /> Converted Customer
             </span>
           ) : (
             <button
               onClick={handlePromoteToCustomer}
               disabled={converting}
-              className="px-3.5 py-2 bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold rounded-xl shadow transition flex items-center gap-1.5 disabled:opacity-50"
+              className="flex-1 sm:flex-none justify-center px-3.5 py-2 bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold rounded-xl shadow transition flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
             >
-              <Sparkles className="w-4 h-4 text-amber-300" /> {converting ? 'Promoting...' : 'Promote to Customer'}
+              <Sparkles className="w-4 h-4 text-amber-300" /> {converting ? 'Promoting...' : 'Promote'}
             </button>
           )}
 
@@ -357,17 +357,17 @@ export default function LeadDetailPage() {
             href={generateWhatsAppLink(lead.phone, `नमस्ते ${lead.full_name} 🙏 Dharmikshree team connecting with you.`)}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition shadow flex items-center gap-1.5"
+            className="flex-1 sm:flex-none justify-center px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition shadow flex items-center gap-1.5"
           >
-            <MessageSquare className="w-4 h-4" /> WhatsApp Client
+            <MessageSquare className="w-4 h-4" /> WhatsApp
           </a>
 
           {userRole !== 'team_member' && (
             <button
               onClick={handleAddPayment}
-              className="px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold rounded-xl shadow transition flex items-center gap-1.5"
+              className="flex-1 sm:flex-none justify-center px-3.5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold rounded-xl shadow transition flex items-center gap-1.5 cursor-pointer"
             >
-              <IndianRupee className="w-4 h-4" /> Record Payment
+              <IndianRupee className="w-4 h-4" /> Payment
             </button>
           )}
         </div>

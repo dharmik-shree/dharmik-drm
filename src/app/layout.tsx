@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter, Playfair_Display, Noto_Sans_Devanagari } from 'next/font/google';
 import './globals.css';
 
@@ -19,6 +19,12 @@ const devanagari = Noto_Sans_Devanagari({
   variable: '--font-devanagari',
   display: 'swap',
 });
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+};
 
 export const metadata: Metadata = {
   title: 'Dharmikshree CRM & Client Management System',

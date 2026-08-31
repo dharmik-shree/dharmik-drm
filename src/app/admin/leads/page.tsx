@@ -97,11 +97,11 @@ export default function LeadsPage() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 max-w-full overflow-x-hidden">
       {/* Header & Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-200 pb-4">
         <div>
-          <h1 className="text-2xl font-bold font-serif-heading text-[#1A3C5E]">
+          <h1 className="text-xl sm:text-2xl font-bold font-serif-heading text-[#1A3C5E]">
             Lead Management Pipeline
           </h1>
           <p className="text-slate-500 text-xs">
@@ -109,43 +109,43 @@ export default function LeadsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-between sm:justify-end">
           {/* View Toggle */}
           <div className="flex bg-slate-200/80 p-1 rounded-xl">
             <button
               onClick={() => setViewMode('kanban')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
                 viewMode === 'kanban' ? 'bg-white text-[#1A3C5E] shadow-xs' : 'text-slate-600'
               }`}
             >
               <KanbanSquare className="w-4 h-4" />
-              Kanban View
+              <span className="hidden xs:inline">Kanban</span>
             </button>
             <button
               onClick={() => setViewMode('table')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+              className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
                 viewMode === 'table' ? 'bg-white text-[#1A3C5E] shadow-xs' : 'text-slate-600'
               }`}
             >
               <Table className="w-4 h-4" />
-              Table View
+              <span className="hidden xs:inline">Table</span>
             </button>
           </div>
 
           <button
             onClick={() => router.push('/admin/leads/new')}
-            className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl shadow transition flex items-center gap-1"
+            className="px-3.5 sm:px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl shadow transition flex items-center gap-1 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            Add Lead
+            <span>Add Lead</span>
           </button>
         </div>
       </div>
 
       {/* Filter Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-center gap-3">
+      <div className="bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-xs flex flex-wrap items-center gap-2.5 sm:gap-3">
         {/* Search */}
-        <div className="relative flex-1 min-w-[200px]">
+        <div className="relative flex-1 min-w-[180px] w-full sm:w-auto">
           <input
             type="text"
             placeholder="Search lead name, phone, city..."
@@ -160,7 +160,7 @@ export default function LeadsPage() {
         <select
           value={stageFilter}
           onChange={(e) => setStageFilter(e.target.value)}
-          className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none font-medium text-slate-700"
+          className="flex-1 sm:flex-none px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none font-medium text-slate-700 cursor-pointer"
         >
           <option value="all">All Stages (14)</option>
           {PIPELINE_STAGES.map((s) => (
@@ -174,7 +174,7 @@ export default function LeadsPage() {
         <select
           value={tempFilter}
           onChange={(e) => setTempFilter(e.target.value)}
-          className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none font-medium text-slate-700"
+          className="flex-1 sm:flex-none px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none font-medium text-slate-700 cursor-pointer"
         >
           <option value="all">All Temperatures</option>
           {LEAD_TEMPERATURES.map((t) => (
@@ -188,7 +188,7 @@ export default function LeadsPage() {
         <select
           value={serviceFilter}
           onChange={(e) => setServiceFilter(e.target.value)}
-          className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none font-medium text-slate-700"
+          className="flex-1 sm:flex-none px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none font-medium text-slate-700 cursor-pointer"
         >
           <option value="all">All Services (8)</option>
           {SERVICE_OPTIONS.map((s) => (
@@ -207,7 +207,7 @@ export default function LeadsPage() {
               setTempFilter('all');
               setServiceFilter('all');
             }}
-            className="p-2 text-slate-400 hover:text-slate-700 transition"
+            className="p-2 text-slate-400 hover:text-slate-700 transition cursor-pointer"
             title="Reset Filters"
           >
             <RefreshCw className="w-4 h-4" />
@@ -217,7 +217,7 @@ export default function LeadsPage() {
 
       {/* Main Content View */}
       {loading ? (
-        <div className="py-16 text-center text-slate-400">Loading pipeline leads...</div>
+        <div className="py-16 text-center text-slate-400 text-xs sm:text-sm">Loading pipeline leads...</div>
       ) : viewMode === 'kanban' ? (
         <LeadKanban leads={filteredLeads} onStageChange={handleStageChange} />
       ) : (

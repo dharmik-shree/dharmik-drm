@@ -167,14 +167,14 @@ export default function AdminKundaliPage() {
   };
 
   return (
-    <div className="space-y-8 pb-16 max-w-6xl mx-auto">
+    <div className="space-y-6 sm:space-y-8 pb-16 max-w-6xl mx-auto w-full">
       {/* Header */}
-      <div className="border-b border-slate-200 pb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="border-b border-slate-200 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 text-amber-600 font-bold text-xs uppercase tracking-widest mb-1">
-            <Sparkles className="w-4 h-4" /> CRM Client PDF Service
+            <Sparkles className="w-4 h-4 shrink-0" /> CRM Client PDF Service
           </div>
-          <h1 className="text-2xl font-bold font-serif-heading text-[#1A3C5E]">
+          <h1 className="text-xl sm:text-2xl font-bold font-serif-heading text-[#1A3C5E]">
             Kundali & Horoscope Report Generator
           </h1>
           <p className="text-slate-500 text-xs mt-0.5">
@@ -185,7 +185,7 @@ export default function AdminKundaliPage() {
         {pdfResult && (
           <button
             onClick={handleReset}
-            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl flex items-center gap-2 border border-slate-300 transition"
+            className="w-full sm:w-auto px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl flex items-center justify-center gap-2 border border-slate-300 transition cursor-pointer"
           >
             <RefreshCw className="w-4 h-4" /> Generate New Report
           </button>
@@ -194,22 +194,22 @@ export default function AdminKundaliPage() {
 
       {/* ERROR ALERT */}
       {errorMessage && (
-        <div className="bg-red-50 border border-red-200 p-4 rounded-xl flex items-start gap-3 text-red-800 text-sm shadow-xs">
+        <div className="bg-red-50 border border-red-200 p-3.5 sm:p-4 rounded-xl flex items-start gap-3 text-red-800 text-xs sm:text-sm shadow-xs">
           <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
           <div className="flex-1 font-medium">{errorMessage}</div>
         </div>
       )}
 
       {!pdfResult ? (
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
           {/* Quick Lead Auto-Fill Dropdown */}
           {leads.length > 0 && (
-            <div className="bg-amber-500/10 border border-amber-500/30 p-5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="bg-amber-500/10 border border-amber-500/30 p-4 sm:p-5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div className="space-y-0.5">
-                <span className="font-bold text-amber-900 text-sm flex items-center gap-1.5">
-                  <Search className="w-4 h-4 text-amber-600" /> Select CRM Client / Lead (Optional Auto-fill)
+                <span className="font-bold text-amber-900 text-xs sm:text-sm flex items-center gap-1.5">
+                  <Search className="w-4 h-4 text-amber-600 shrink-0" /> Select CRM Client / Lead (Auto-fill)
                 </span>
-                <p className="text-slate-600 text-xs">
+                <p className="text-slate-600 text-[11px] sm:text-xs">
                   Pick a lead from your pipeline to pre-fill client name & city details.
                 </p>
               </div>
@@ -217,7 +217,7 @@ export default function AdminKundaliPage() {
               <select
                 value={selectedLeadId}
                 onChange={handleLeadSelect}
-                className="w-full sm:w-72 p-2.5 bg-white border border-amber-500/40 rounded-xl text-xs font-semibold text-slate-800 outline-none shadow-xs"
+                className="w-full sm:w-72 p-2.5 bg-white border border-amber-500/40 rounded-xl text-xs font-semibold text-slate-800 outline-none shadow-xs cursor-pointer"
               >
                 <option value="">-- Choose Existing Client --</option>
                 {leads.map((l) => (
@@ -230,34 +230,34 @@ export default function AdminKundaliPage() {
           )}
 
           {/* REPORT TYPE SELECTION CARDS */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+          <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
             <div className="border-b border-slate-100 pb-3">
-              <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
-                <BookOpen className="w-4 h-4 text-amber-600" /> 1. Select Report Type (PDF Format) *
+              <h3 className="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-amber-600 shrink-0" /> 1. Select Report Type (PDF Format) *
               </h3>
               <p className="text-xs text-slate-500">
-                Basic Horoscope is selected by default. You can choose from 5 AstrologyAPI PDF report formats.
+                Basic Horoscope is selected by default. Choose from 5 AstrologyAPI PDF report formats.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               {PDF_REPORT_TYPES.map((type: PdfReportTypeOption) => {
                 const isSelected = formData.reportType === type.key;
                 return (
                   <div
                     key={type.key}
                     onClick={() => setFormData((prev) => ({ ...prev, reportType: type.key }))}
-                    className={`p-4 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between space-y-3 ${
+                    className={`p-3.5 sm:p-4 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between space-y-2.5 ${
                       isSelected
                         ? 'bg-amber-50/70 border-amber-500 shadow-md ring-2 ring-amber-500/20'
                         : 'bg-slate-50/50 border-slate-200 hover:border-slate-300 hover:bg-slate-100/50'
                     }`}
                   >
                     <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-slate-900 text-sm">{type.name}</span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-bold text-slate-900 text-xs sm:text-sm">{type.name}</span>
                         {isSelected && (
-                          <span className="px-2 py-0.5 text-[10px] uppercase font-extrabold bg-amber-500 text-slate-950 rounded-md">
+                          <span className="px-2 py-0.5 text-[9px] sm:text-[10px] uppercase font-extrabold bg-amber-500 text-slate-950 rounded-md shrink-0">
                             Selected
                           </span>
                         )}
@@ -272,17 +272,17 @@ export default function AdminKundaliPage() {
           </div>
 
           {/* CLIENT BIRTH DETAILS INPUT FORM */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-6">
+          <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs space-y-5 sm:space-y-6">
             <div className="border-b border-slate-100 pb-3">
-              <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
-                <User className="w-4 h-4 text-amber-600" /> 2. Client Birth Particulars
+              <h3 className="font-bold text-slate-900 text-sm sm:text-base flex items-center gap-2">
+                <User className="w-4 h-4 text-amber-600 shrink-0" /> 2. Client Birth Particulars
               </h3>
               <p className="text-xs text-slate-500">
                 Enter client birth information for planetary calculations.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 text-xs">
               {/* Full Name */}
               <div className="space-y-1.5">
                 <label className="block font-semibold text-slate-700">
@@ -295,7 +295,7 @@ export default function AdminKundaliPage() {
                   value={formData.fullName}
                   onChange={handleChange}
                   placeholder="e.g. Binju Jani"
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 outline-none focus:border-amber-500"
+                  className="w-full p-2.5 sm:p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 outline-none focus:border-amber-500 text-xs sm:text-sm"
                 />
               </div>
 
@@ -306,7 +306,7 @@ export default function AdminKundaliPage() {
                   name="gender"
                   value={formData.gender}
                   onChange={handleChange}
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 outline-none focus:border-amber-500"
+                  className="w-full p-2.5 sm:p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 outline-none focus:border-amber-500 text-xs sm:text-sm cursor-pointer"
                 >
                   <option value="male">Male (पुरुष) - Default</option>
                   <option value="female">Female (स्त्री)</option>
@@ -316,14 +316,14 @@ export default function AdminKundaliPage() {
               {/* Date of Birth */}
               <div className="space-y-1.5">
                 <label className="block font-semibold text-slate-700 flex items-center gap-1">
-                  <Calendar className="w-3.5 h-3.5 text-amber-600" /> Date of Birth (जन्म तिथि) *
+                  <Calendar className="w-3.5 h-3.5 text-amber-600 shrink-0" /> Date of Birth (जन्म तिथि) *
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
                   <select
                     name="day"
                     value={formData.day}
                     onChange={handleChange}
-                    className="p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 outline-none"
+                    className="p-2.5 sm:p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 outline-none text-xs sm:text-sm cursor-pointer"
                   >
                     {Array.from({ length: 31 }, (_, i) => (
                       <option key={i + 1} value={(i + 1).toString()}>
@@ -335,7 +335,7 @@ export default function AdminKundaliPage() {
                     name="month"
                     value={formData.month}
                     onChange={handleChange}
-                    className="p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 outline-none"
+                    className="p-2.5 sm:p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 outline-none text-xs sm:text-sm cursor-pointer"
                   >
                     {[
                       '1 (Jan)',
@@ -363,7 +363,7 @@ export default function AdminKundaliPage() {
                     value={formData.year}
                     onChange={handleChange}
                     placeholder="YYYY"
-                    className="p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 outline-none"
+                    className="p-2.5 sm:p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 outline-none text-xs sm:text-sm"
                   />
                 </div>
               </div>
@@ -371,14 +371,14 @@ export default function AdminKundaliPage() {
               {/* Time of Birth */}
               <div className="space-y-1.5">
                 <label className="block font-semibold text-slate-700 flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-amber-600" /> Time of Birth (जन्म समय) *
+                  <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" /> Time of Birth (जन्म समय) *
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
                   <select
                     name="hour"
                     value={formData.hour}
                     onChange={handleChange}
-                    className="p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 outline-none"
+                    className="p-2.5 sm:p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 outline-none text-xs sm:text-sm cursor-pointer"
                   >
                     {Array.from({ length: 12 }, (_, i) => {
                       const h = (i + 1).toString().padStart(2, '0');
@@ -393,7 +393,7 @@ export default function AdminKundaliPage() {
                     name="minute"
                     value={formData.minute}
                     onChange={handleChange}
-                    className="p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 outline-none"
+                    className="p-2.5 sm:p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 outline-none text-xs sm:text-sm cursor-pointer"
                   >
                     {Array.from({ length: 60 }, (_, i) => {
                       const m = i.toString().padStart(2, '0');
@@ -408,7 +408,7 @@ export default function AdminKundaliPage() {
                     name="amPm"
                     value={formData.amPm}
                     onChange={handleChange}
-                    className="p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 outline-none"
+                    className="p-2.5 sm:p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 outline-none text-xs sm:text-sm cursor-pointer"
                   >
                     <option value="AM">AM</option>
                     <option value="PM">PM</option>
@@ -419,7 +419,7 @@ export default function AdminKundaliPage() {
               {/* Birth Place and Country */}
               <div className="space-y-1.5">
                 <label className="block font-semibold text-slate-700 flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5 text-amber-600" /> Birth Place & Country (जन्म स्थान) *
+                  <MapPin className="w-3.5 h-3.5 text-amber-600 shrink-0" /> Birth Place & Country (जन्म स्थान) *
                 </label>
                 <input
                   type="text"
@@ -427,20 +427,20 @@ export default function AdminKundaliPage() {
                   required
                   value={formData.birthPlace}
                   onChange={handleChange}
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 outline-none focus:border-amber-500"
+                  className="w-full p-2.5 sm:p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 outline-none focus:border-amber-500 text-xs sm:text-sm"
                 />
               </div>
 
               {/* Report Language */}
               <div className="space-y-1.5">
                 <label className="block font-semibold text-slate-700 flex items-center gap-1">
-                  <Globe className="w-3.5 h-3.5 text-amber-600" /> Report Language (रिपोर्ट भाषा) *
+                  <Globe className="w-3.5 h-3.5 text-amber-600 shrink-0" /> Report Language (रिपोर्ट भाषा) *
                 </label>
                 <select
                   name="language"
                   value={formData.language}
                   onChange={handleChange}
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 outline-none focus:border-amber-500"
+                  className="w-full p-2.5 sm:p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-900 outline-none focus:border-amber-500 text-xs sm:text-sm cursor-pointer"
                 >
                   <option value="hi">Hindi (हिन्दी) - Default</option>
                   <option value="en">English</option>
@@ -453,7 +453,7 @@ export default function AdminKundaliPage() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full sm:w-auto px-8 py-3.5 bg-[#1A3C5E] hover:bg-[#15304b] text-amber-400 font-bold text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                className="w-full sm:w-auto px-8 py-3.5 bg-[#1A3C5E] hover:bg-[#15304b] text-amber-400 font-bold text-xs sm:text-sm rounded-xl shadow-lg transition flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
               >
                 {isSubmitting ? (
                   <>
@@ -473,13 +473,13 @@ export default function AdminKundaliPage() {
       ) : (
         /* RESULT VIEW & EMBEDDED PDF VIEWER */
         <div className="space-y-6">
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="p-3 bg-emerald-100 text-emerald-700 rounded-2xl shrink-0">
                 <CheckCircle2 className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="font-bold text-slate-900 text-lg">
+                <h3 className="font-bold text-slate-900 text-base sm:text-lg">
                   {pdfResult.name}&apos;s {pdfResult.reportTypeName} Ready!
                 </h3>
                 <p className="text-xs text-slate-500">
@@ -488,10 +488,10 @@ export default function AdminKundaliPage() {
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
               <button
                 onClick={handleCopyLink}
-                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl border border-slate-300 transition flex items-center gap-2"
+                className="w-full sm:w-auto px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl border border-slate-300 transition flex items-center justify-center gap-2 cursor-pointer"
               >
                 {copiedLink ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
                 {copiedLink ? 'Copied!' : 'Copy PDF URL'}
@@ -501,7 +501,7 @@ export default function AdminKundaliPage() {
                 href={pdfResult.pdfUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl border border-slate-300 transition flex items-center gap-2"
+                className="w-full sm:w-auto px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl border border-slate-300 transition flex items-center justify-center gap-2"
               >
                 <ExternalLink className="w-4 h-4" /> Open in New Tab
               </a>
@@ -511,7 +511,7 @@ export default function AdminKundaliPage() {
                 download={`${pdfResult.name.replace(/\s+/g, '_')}_Kundali.pdf`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-6 py-2.5 bg-[#1A3C5E] hover:bg-[#15304b] text-amber-400 font-bold text-xs rounded-xl shadow-md transition flex items-center gap-2"
+                className="w-full sm:w-auto px-6 py-2.5 bg-[#1A3C5E] hover:bg-[#15304b] text-amber-400 font-bold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2"
               >
                 <Download className="w-4 h-4" /> Download PDF Report
               </a>
@@ -519,7 +519,7 @@ export default function AdminKundaliPage() {
           </div>
 
           {/* Embedded Viewer */}
-          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden h-[850px] shadow-lg">
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden h-[500px] sm:h-[700px] lg:h-[850px] shadow-lg">
             <iframe
               src={pdfResult.pdfUrl}
               className="w-full h-full border-none"
