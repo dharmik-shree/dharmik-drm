@@ -56,7 +56,7 @@ export const PDF_REPORT_TYPES: PdfReportTypeOption[] = [
 ];
 
 export const DEFAULT_ASTROLOGY_CONFIG: AstrologyCompanyConfig = {
-  logo_url: "https://neytabykygedayelyhvi.supabase.co/storage/v1/object/public/logo/ds_logo_500.png",
+  logo_url: "https://neytabykygedayelyhvi.supabase.co/storage/v1/object/public/logo/dharmik_logo.png",
   domain_url: "https://dharmikshree.com/",
   chart_style: "NORTH_INDIAN",
   footer_link: "https://dharmikshree.com/",
