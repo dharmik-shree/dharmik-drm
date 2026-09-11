@@ -17,6 +17,8 @@ import {
   UserCheck,
   Sparkles,
   Compass,
+  Trash2,
+  Edit3,
 } from 'lucide-react';
 
 interface LeadTableProps {
@@ -24,13 +26,52 @@ interface LeadTableProps {
   onStageChange: (leadId: string, newStage: PipelineStage) => void;
   userRole: UserRole;
   onRefreshLeads?: () => void;
+  onDeleteLead?: (leadId: string, leadName: string) => void;
 }
 
-export function LeadTable({ leads, onStageChange, userRole, onRefreshLeads }: LeadTableProps) {
+export function LeadTable({ leads, onStageChange, userRole, onRefreshLeads, onDeleteLead }: LeadTableProps) {
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const [sortField, setSortField] = useState<keyof Lead>('created_at');
   const [sortAsc, setSortAsc] = useState(false);
   const [convertingId, setConvertingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDelete = async (leadId: string, leadName: string) => {
+    if (onDeleteLead) {
+      onDeleteLead(leadId, leadName);
+      return;
+    }
+    if (!confirm(`Are you sure you want to delete lead "${leadName}"?\n\nThis will remove the lead and all its scheduled reminders.`)) {
+      return;
+    }
+    setDeletingId(leadId);
+    try {
+      const res = await fetch(`/api/leads/${leadId}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to delete lead');
+      if (onRefreshLeads) onRefreshLeads();
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete lead');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedLeadIds.length === 0) return;
+    if (!confirm(`Are you sure you want to delete ${selectedLeadIds.length} selected lead(s)?\n\nThis will remove the leads and their associated reminders.`)) {
+      return;
+    }
+    try {
+      await Promise.all(
+        selectedLeadIds.map((id) => fetch(`/api/leads/${id}`, { method: 'DELETE' }))
+      );
+      setSelectedLeadIds([]);
+      if (onRefreshLeads) onRefreshLeads();
+    } catch (err: any) {
+      alert(err.message || 'Error deleting selected leads');
+    }
+  };
 
   const handlePromote = async (leadId: string, leadName: string) => {
     if (!confirm(`Promote ${leadName} to Customer?`)) return;
@@ -119,9 +160,16 @@ export function LeadTable({ leads, onStageChange, userRole, onRefreshLeads }: Le
             <div className="flex items-center gap-2">
               <button
                 onClick={() => alert(`Bulk reassigning ${selectedLeadIds.length} leads`)}
-                className="px-3 py-1.5 bg-white border border-slate-300 text-xs font-semibold text-slate-700 rounded-lg hover:bg-slate-50 transition"
+                className="px-3 py-1.5 bg-white border border-slate-300 text-xs font-semibold text-slate-700 rounded-lg hover:bg-slate-50 transition cursor-pointer"
               >
                 Reassign Team
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                className="px-3 py-1.5 bg-red-50 border border-red-200 text-xs font-semibold text-red-600 rounded-lg hover:bg-red-100 transition flex items-center gap-1 cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>Delete Selected ({selectedLeadIds.length})</span>
               </button>
             </div>
           )}
@@ -284,12 +332,28 @@ export function LeadTable({ leads, onStageChange, userRole, onRefreshLeads }: Le
                           <MessageSquare className="w-4 h-4" />
                         </a>
                         <Link
+                          href={`/admin/leads/${lead.id}?edit=true`}
+                          className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition"
+                          title="Edit Lead Details"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </Link>
+                        <Link
                           href={`/admin/leads/${lead.id}`}
                           className="p-1.5 text-[#1A3C5E] hover:bg-slate-100 rounded-lg transition"
                           title="View Profile"
                         >
                           <ExternalLink className="w-4 h-4" />
                         </Link>
+                        <button
+                          type="button"
+                          disabled={deletingId === lead.id}
+                          onClick={() => handleDelete(lead.id, lead.full_name)}
+                          className="p-1.5 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition disabled:opacity-50 cursor-pointer"
+                          title="Delete Lead & Reminders"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>

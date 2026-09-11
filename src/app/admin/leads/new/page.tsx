@@ -1,13 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Save, Sparkles, Phone, User, Calendar, MapPin, Tag, Compass, HeartHandshake } from 'lucide-react';
+import { ArrowLeft, Save, Sparkles, Phone, User, Calendar, MapPin, Tag, Compass, HeartHandshake, Loader2 } from 'lucide-react';
 import { SERVICE_OPTIONS, LEAD_SOURCES, LEAD_TEMPERATURES, PIPELINE_STAGES, GENDER_OPTIONS, RELATION_OPTIONS, MARITAL_STATUS_OPTIONS, RASHI_OPTIONS } from '@/lib/constants';
 import { generatePreConsultReminders } from '@/lib/reminders';
 
 export default function CreateLeadPage() {
   const router = useRouter();
+  const isSubmittingRef = useRef(false);
 
   const [formData, setFormData] = useState({
     full_name: '',
@@ -76,6 +77,9 @@ export default function CreateLeadPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmittingRef.current || loading) return;
+
+    isSubmittingRef.current = true;
     setLoading(true);
 
     const cleanPhone = formData.phone.startsWith('+91') ? formData.phone : `+91 ${formData.phone.replace(/\D/g, '')}`;
@@ -92,7 +96,15 @@ export default function CreateLeadPage() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to create lead');
+      if (!res.ok) {
+        if (res.status === 409 && data.duplicateLeadId) {
+          if (confirm(`${data.error}\n\nWould you like to view the existing lead record?`)) {
+            router.push(`/admin/leads/${data.duplicateLeadId}`);
+            return;
+          }
+        }
+        throw new Error(data.error || 'Failed to create lead');
+      }
 
       const createdLead = data.lead;
 
@@ -112,6 +124,7 @@ export default function CreateLeadPage() {
       alert(err.message || 'Error creating lead in Supabase');
     } finally {
       setLoading(false);
+      isSubmittingRef.current = false;
     }
   };
 
@@ -500,9 +513,19 @@ export default function CreateLeadPage() {
             <button
               type="submit"
               disabled={loading}
-              className="px-6 py-3 bg-[#1A3C5E] hover:bg-[#15304b] text-amber-400 font-bold text-xs rounded-xl shadow-lg transition flex items-center gap-2 disabled:opacity-50"
+              className="px-6 py-3 bg-[#1A3C5E] hover:bg-[#15304b] text-amber-400 font-bold text-xs rounded-xl shadow-lg transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
-              <Save className="w-4 h-4" /> {loading ? 'Saving Lead Profile...' : 'Save Lead Profile'}
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
+                  <span>Saving Lead Profile...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  <span>Save Lead Profile</span>
+                </>
+              )}
             </button>
           </div>
         </form>

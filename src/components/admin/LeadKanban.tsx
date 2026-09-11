@@ -15,14 +15,17 @@ import {
   Clock,
   ArrowRight,
   Sparkles,
+  Trash2,
+  Edit3,
 } from 'lucide-react';
 
 interface LeadKanbanProps {
   leads: Lead[];
   onStageChange: (leadId: string, newStage: PipelineStage) => void;
+  onDeleteLead?: (leadId: string, leadName: string) => void;
 }
 
-export function LeadKanban({ leads, onStageChange }: LeadKanbanProps) {
+export function LeadKanban({ leads, onStageChange, onDeleteLead }: LeadKanbanProps) {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [targetStage, setTargetStage] = useState<PipelineStage | null>(null);
 
@@ -150,6 +153,25 @@ export function LeadKanban({ leads, onStageChange }: LeadKanbanProps) {
                           </span>
 
                           <div className="flex items-center gap-1">
+                            <Link
+                              href={`/admin/leads/${lead.id}?edit=true`}
+                              className="p-1 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded transition"
+                              title="Edit Lead Details"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </Link>
+
+                            {onDeleteLead && (
+                              <button
+                                type="button"
+                                onClick={() => onDeleteLead(lead.id, lead.full_name)}
+                                className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition cursor-pointer"
+                                title="Delete Lead & Reminders"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+
                             <a
                               href={`https://wa.me/${lead.phone.replace(/\D/g, '')}`}
                               target="_blank"

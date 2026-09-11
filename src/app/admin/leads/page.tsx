@@ -79,6 +79,20 @@ export default function LeadsPage() {
     }
   };
 
+  const handleDeleteLead = async (leadId: string, leadName: string) => {
+    if (!confirm(`Are you sure you want to delete lead "${leadName}"?\n\nThis will permanently remove the lead and all its associated scheduled reminders.`)) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/leads/${leadId}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to delete lead');
+      setLeads((prev) => prev.filter((l) => l.id !== leadId));
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete lead');
+    }
+  };
+
   // Filter application
   const filteredLeads = leads.filter((lead) => {
     if (search.trim()) {
@@ -219,9 +233,9 @@ export default function LeadsPage() {
       {loading ? (
         <div className="py-16 text-center text-slate-400 text-xs sm:text-sm">Loading pipeline leads...</div>
       ) : viewMode === 'kanban' ? (
-        <LeadKanban leads={filteredLeads} onStageChange={handleStageChange} />
+        <LeadKanban leads={filteredLeads} onStageChange={handleStageChange} onDeleteLead={handleDeleteLead} />
       ) : (
-        <LeadTable leads={filteredLeads} onStageChange={handleStageChange} userRole={userRole} onRefreshLeads={fetchLeads} />
+        <LeadTable leads={filteredLeads} onStageChange={handleStageChange} userRole={userRole} onRefreshLeads={fetchLeads} onDeleteLead={handleDeleteLead} />
       )}
     </div>
   );

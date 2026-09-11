@@ -63,6 +63,44 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Full name and phone are required' }, { status: 400 });
     }
 
+    // Deduplication check: normalize phone number (last 10 digits)
+    const cleanPhoneDigits = phone.replace(/\D/g, '').slice(-10);
+
+    if (cleanPhoneDigits.length >= 10) {
+      const { data: existingLeads } = await supabase
+        .from('leads')
+        .select('*, assigned_to_user:users!assigned_to(id, full_name, role, avatar_url)')
+        .is('deleted_at', null)
+        .eq('is_converted', false);
+
+      const duplicateLead = existingLeads?.find((l) => {
+        const existingDigits = (l.phone || '').replace(/\D/g, '').slice(-10);
+        return existingDigits.length >= 10 && existingDigits === cleanPhoneDigits;
+      });
+
+      if (duplicateLead) {
+        const createdAtTime = new Date(duplicateLead.created_at).getTime();
+        const isRecentDuplicate = Date.now() - createdAtTime < 60000; // Within 60 seconds (rapid double-tap)
+
+        if (isRecentDuplicate) {
+          return NextResponse.json({
+            success: true,
+            lead: duplicateLead,
+            is_duplicate: true,
+            message: 'Lead record was already created',
+          });
+        }
+
+        return NextResponse.json(
+          {
+            error: `A lead with phone ${phone} already exists: "${duplicateLead.full_name}" (Stage: ${duplicateLead.stage?.replace(/_/g, ' ').toUpperCase() || 'NEW LEAD'}).`,
+            duplicateLeadId: duplicateLead.id,
+          },
+          { status: 409 }
+        );
+      }
+    }
+
     const calculatedFullAmount = full_amount !== undefined ? Number(full_amount) : (SERVICE_OPTIONS.find(s => s.key === service_interest)?.price || 9900);
     const calculatedPaid = amount_paid !== undefined ? Number(amount_paid) : 0;
     const paymentStatus = calculatedPaid >= calculatedFullAmount ? 'full_paid' : calculatedPaid > 0 ? 'token_paid' : 'unpaid';

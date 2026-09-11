@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
   ArrowLeft,
   Phone,
@@ -26,8 +26,13 @@ import {
   Compass,
   Star,
   UserPlus,
+  Loader2,
+  X,
+  User,
+  Tag,
+  Check,
 } from 'lucide-react';
-import { PIPELINE_STAGES, SERVICE_OPTIONS, LEAD_TEMPERATURES, GENDER_OPTIONS, RELATION_OPTIONS, MARITAL_STATUS_OPTIONS, RASHI_OPTIONS } from '@/lib/constants';
+import { PIPELINE_STAGES, SERVICE_OPTIONS, LEAD_TEMPERATURES, LEAD_SOURCES, GENDER_OPTIONS, RELATION_OPTIONS, MARITAL_STATUS_OPTIONS, RASHI_OPTIONS } from '@/lib/constants';
 import { formatINR, formatPhoneIN, formatDateIN, formatDateTimeIN } from '@/lib/formatters';
 import { generateWhatsAppLink } from '@/lib/whatsapp';
 import { generatePreConsultReminders } from '@/lib/reminders';
@@ -37,6 +42,7 @@ import { Lead, LeadActivity, PipelineStage, UserRole, Reminder, PaymentRecord } 
 export default function LeadDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const leadId = params.id as string;
 
   const [userRole, setUserRole] = useState<UserRole>('super_admin');
@@ -44,9 +50,62 @@ export default function LeadDetailPage() {
   const [activities, setActivities] = useState<LeadActivity[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [teamMembers, setTeamMembers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [converting, setConverting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
   const [showKundaliModal, setShowKundaliModal] = useState(false);
+  const [showEditLeadModal, setShowEditLeadModal] = useState(searchParams.get('edit') === 'true');
+  const [editActiveTab, setEditActiveTab] = useState<'contact' | 'service' | 'financials' | 'kundali' | 'notes'>('contact');
+
+  // Edit Payment Modal State
+  const [showEditPaymentModal, setShowEditPaymentModal] = useState(false);
+  const [editingPayment, setEditingPayment] = useState<PaymentRecord | null>(null);
+  const [savingPayment, setSavingPayment] = useState(false);
+  const [editPaymentForm, setEditPaymentForm] = useState({
+    id: '',
+    amount: 0,
+    payment_mode: 'upi',
+    payment_type: 'full',
+    payment_date: '',
+    reference_no: '',
+    notes: '',
+  });
+
+  const [editForm, setEditForm] = useState({
+    full_name: '',
+    phone: '',
+    whatsapp: '',
+    email: '',
+    city: '',
+    state: '',
+    country: 'India',
+    service_interest: 'divine_consultation',
+    consultation_mode: 'online',
+    lead_temperature: 'warm',
+    lead_source: 'website',
+    stage: 'new_lead',
+    assigned_to: '',
+    date_of_consultation: '',
+    full_amount: 9900,
+    amount_paid: 0,
+    date_of_birth: '',
+    time_of_birth: '',
+    birth_place: '',
+    gender: 'male',
+    relation: 'self',
+    address: '',
+    pincode: '',
+    marital_status: 'single',
+    gotra: '',
+    rashi: '',
+    occupation: '',
+    kundali_notes: '',
+    internal_notes: '',
+    tags: '',
+  });
+
   const [kundaliForm, setKundaliForm] = useState({
     date_of_birth: '',
     time_of_birth: '',
@@ -79,8 +138,50 @@ export default function LeadDetailPage() {
     const match = document.cookie.match(/dharmik_demo_role=([^;]+)/);
     if (match) setUserRole(match[1] as UserRole);
 
+    fetch('/api/team')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.team) setTeamMembers(data.team);
+      })
+      .catch((err) => console.error('Error fetching team:', err));
+
     loadLeadData();
   }, [leadId]);
+
+  function populateEditForm(l: Lead) {
+    setEditForm({
+      full_name: l.full_name || '',
+      phone: l.phone || '',
+      whatsapp: l.whatsapp || l.phone || '',
+      email: l.email || '',
+      city: l.city || '',
+      state: l.state || '',
+      country: l.country || 'India',
+      service_interest: (l.service_interest || 'divine_consultation') as any,
+      consultation_mode: (l.consultation_mode || 'online') as any,
+      lead_temperature: (l.lead_temperature || 'warm') as any,
+      lead_source: (l.lead_source || 'website') as any,
+      stage: (l.stage || 'new_lead') as any,
+      assigned_to: l.assigned_to || '',
+      date_of_consultation: l.date_of_consultation ? new Date(l.date_of_consultation).toISOString().slice(0, 16) : '',
+      full_amount: l.full_amount !== undefined ? l.full_amount : 9900,
+      amount_paid: l.amount_paid !== undefined ? l.amount_paid : 0,
+      date_of_birth: l.date_of_birth || '',
+      time_of_birth: l.time_of_birth || '',
+      birth_place: l.birth_place || '',
+      gender: (l.gender || 'male') as any,
+      relation: (l.relation || 'self') as any,
+      address: l.address || '',
+      pincode: l.pincode || '',
+      marital_status: (l.marital_status || 'single') as any,
+      gotra: l.gotra || '',
+      rashi: l.rashi || '',
+      occupation: l.occupation || '',
+      kundali_notes: l.kundali_notes || '',
+      internal_notes: l.internal_notes || '',
+      tags: Array.isArray(l.tags) ? l.tags.join(', ') : (l.tags || ''),
+    });
+  }
 
   async function loadLeadData() {
     try {
@@ -95,6 +196,7 @@ export default function LeadDetailPage() {
       if (resLead.lead) {
         const l = resLead.lead;
         setLead(l);
+        populateEditForm(l);
         setKundaliForm({
           date_of_birth: l.date_of_birth || '',
           time_of_birth: l.time_of_birth || '',
@@ -122,6 +224,176 @@ export default function LeadDetailPage() {
       setLoading(false);
     }
   }
+
+  const handleSaveEditLead = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!lead) return;
+    setSavingEdit(true);
+
+    try {
+      const cleanTags = editForm.tags
+        ? editForm.tags.split(',').map((t: string) => t.trim()).filter(Boolean)
+        : [];
+
+      const payload = {
+        ...editForm,
+        tags: cleanTags,
+        date_of_consultation: editForm.date_of_consultation ? new Date(editForm.date_of_consultation).toISOString() : null,
+        date_of_birth: editForm.date_of_birth || null,
+        full_amount: Number(editForm.full_amount) || 0,
+        amount_paid: Number(editForm.amount_paid) || 0,
+      };
+
+      const res = await fetch(`/api/leads/${lead.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update lead details');
+
+      if (data.lead) {
+        setLead(data.lead);
+        populateEditForm(data.lead);
+      }
+
+      // If consultation date changed, sync reminders
+      if (editForm.date_of_consultation && (!lead.date_of_consultation || new Date(editForm.date_of_consultation).getTime() !== new Date(lead.date_of_consultation).getTime())) {
+        const autoRems = generatePreConsultReminders(data.lead || lead, new Date(editForm.date_of_consultation).toISOString());
+        await fetch('/api/reminders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reminders: autoRems }),
+        });
+        const resRem = await fetch(`/api/reminders?lead_id=${lead.id}`).then((r) => r.json());
+        if (resRem.reminders) setReminders(resRem.reminders);
+      }
+
+      // Log activity
+      await fetch('/api/activities', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lead_id: lead.id,
+          activity_type: 'note',
+          content: 'Updated lead details & client profile record',
+          is_internal: true,
+        }),
+      });
+
+      const resAct = await fetch(`/api/activities?lead_id=${lead.id}`).then((r) => r.json());
+      if (resAct.activities) setActivities(resAct.activities);
+
+      setShowEditLeadModal(false);
+      alert('✅ Lead details updated successfully!');
+    } catch (err: any) {
+      alert(err.message || 'Error saving lead updates');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleOpenEditPayment = (p: PaymentRecord) => {
+    setEditingPayment(p);
+    setEditPaymentForm({
+      id: p.id,
+      amount: p.amount,
+      payment_mode: p.payment_mode || 'upi',
+      payment_type: p.payment_type || 'full',
+      payment_date: p.payment_date || new Date().toISOString().split('T')[0],
+      reference_no: p.reference_no || '',
+      notes: p.notes || '',
+    });
+    setShowEditPaymentModal(true);
+  };
+
+  const handleSaveEditPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingPayment || !lead) return;
+    setSavingPayment(true);
+
+    try {
+      const res = await fetch('/api/payments', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editPaymentForm),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to update payment');
+
+      // Refresh payments and lead
+      const [resPay, resLead, resAct] = await Promise.all([
+        fetch(`/api/payments?lead_id=${lead.id}`).then((r) => r.json()),
+        fetch(`/api/leads/${lead.id}`).then((r) => r.json()),
+        fetch(`/api/activities?lead_id=${lead.id}`).then((r) => r.json()),
+      ]);
+
+      if (resPay.payments) setPayments(resPay.payments);
+      if (resLead.lead) {
+        setLead(resLead.lead);
+        populateEditForm(resLead.lead);
+      }
+      if (resAct.activities) setActivities(resAct.activities);
+
+      setShowEditPaymentModal(false);
+      alert('✅ Payment updated and lead balance recalculated successfully!');
+    } catch (err: any) {
+      alert(err.message || 'Error updating payment');
+    } finally {
+      setSavingPayment(false);
+    }
+  };
+
+  const handleDeletePayment = async (paymentId: string, amount: number) => {
+    if (!lead) return;
+    if (!confirm(`Are you sure you want to remove this payment entry of ₹${Number(amount).toLocaleString('en-IN')}?\n\nThis will adjust the client's Dakshina balance due.`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/payments?id=${paymentId}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to delete payment');
+
+      // Refresh payments and lead
+      const [resPay, resLead, resAct] = await Promise.all([
+        fetch(`/api/payments?lead_id=${lead.id}`).then((r) => r.json()),
+        fetch(`/api/leads/${lead.id}`).then((r) => r.json()),
+        fetch(`/api/activities?lead_id=${lead.id}`).then((r) => r.json()),
+      ]);
+
+      if (resPay.payments) setPayments(resPay.payments);
+      if (resLead.lead) {
+        setLead(resLead.lead);
+        populateEditForm(resLead.lead);
+      }
+      if (resAct.activities) setActivities(resAct.activities);
+
+      alert('Payment entry removed and balance updated.');
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete payment');
+    }
+  };
+
+  const handleDeleteLead = async () => {
+    if (!lead) return;
+    if (!confirm(`Are you sure you want to delete lead "${lead.full_name}"?\n\nThis will remove the lead and all its scheduled reminders, and return you to the leads pipeline.`)) {
+      return;
+    }
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/leads/${lead.id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to delete lead');
+      alert(`Lead "${lead.full_name}" and associated reminders deleted successfully.`);
+      router.push('/admin/leads');
+    } catch (err: any) {
+      alert(err.message || 'Failed to delete lead');
+      setDeleting(false);
+    }
+  };
 
   const handlePromoteToCustomer = async () => {
     if (!lead) return;
@@ -353,6 +625,14 @@ export default function LeadDetailPage() {
             </button>
           )}
 
+          <button
+            onClick={() => setShowEditLeadModal(true)}
+            className="flex-1 sm:flex-none justify-center px-3.5 py-2 bg-white hover:bg-slate-50 text-[#1A3C5E] border border-slate-300 text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-xs cursor-pointer"
+            title="Edit Lead Details"
+          >
+            <Edit3 className="w-4 h-4 text-amber-600" /> Edit Lead
+          </button>
+
           <a
             href={generateWhatsAppLink(lead.phone, `नमस्ते ${lead.full_name} 🙏 Dharmikshree team connecting with you.`)}
             target="_blank"
@@ -370,6 +650,15 @@ export default function LeadDetailPage() {
               <IndianRupee className="w-4 h-4" /> Payment
             </button>
           )}
+
+          <button
+            onClick={handleDeleteLead}
+            disabled={deleting}
+            className="flex-1 sm:flex-none justify-center px-3.5 py-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs font-bold rounded-xl transition flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+            title="Delete Lead & Reminders"
+          >
+            <Trash2 className="w-4 h-4" /> {deleting ? 'Deleting...' : 'Delete'}
+          </button>
         </div>
       </div>
 
@@ -393,7 +682,16 @@ export default function LeadDetailPage() {
 
           {/* Key Custom Business Fields */}
           <div className="space-y-3 text-xs">
-            <h3 className="font-bold text-slate-900 uppercase tracking-wider text-[11px]">Consultation Metadata</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-slate-900 uppercase tracking-wider text-[11px]">Consultation Metadata</h3>
+              <button
+                type="button"
+                onClick={() => setShowEditLeadModal(true)}
+                className="px-2 py-0.5 text-[10px] font-bold bg-slate-100 hover:bg-slate-200 text-[#1A3C5E] rounded-md transition flex items-center gap-1 cursor-pointer"
+              >
+                <Edit3 className="w-3 h-3 text-amber-600" /> Edit
+              </button>
+            </div>
 
             <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
               <div className="flex justify-between">
@@ -735,17 +1033,49 @@ export default function LeadDetailPage() {
               <p className="text-xs text-slate-400 py-4">No payment entries recorded yet.</p>
             ) : (
               payments.map((p) => (
-                <div key={p.id} className="p-4 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-4 text-xs">
+                <div key={p.id} className="p-4 bg-slate-50 border border-slate-200 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                   <div>
-                    <span className="font-bold text-slate-900 text-sm">{formatINR(p.amount)}</span>
-                    <p className="text-slate-500">{p.payment_type.toUpperCase()} • Mode: {p.payment_mode.toUpperCase()} • Ref: {p.reference_no}</p>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-900 text-sm">{formatINR(p.amount)}</span>
+                      <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-emerald-100 text-emerald-800 uppercase">
+                        {p.payment_type}
+                      </span>
+                      <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-slate-200 text-slate-700 uppercase">
+                        {p.payment_mode}
+                      </span>
+                    </div>
+                    <p className="text-slate-500 mt-1">
+                      Date: {formatDateIN(p.payment_date)} • Ref: {p.reference_no || 'N/A'} {p.notes ? `• Notes: ${p.notes}` : ''}
+                    </p>
                   </div>
-                  <button
-                    onClick={() => generatePaymentReceiptPDF(p, lead)}
-                    className="px-3 py-1.5 bg-[#1A3C5E] text-white text-xs font-semibold rounded-lg hover:bg-[#15304b] transition"
-                  >
-                    Download Official PDF Receipt
-                  </button>
+
+                  <div className="flex items-center gap-2 self-end sm:self-auto">
+                    <button
+                      onClick={() => handleOpenEditPayment(p)}
+                      className="px-2.5 py-1.5 text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-xs font-semibold rounded-lg transition flex items-center gap-1 cursor-pointer"
+                      title="Edit / Correct Dakshina Amount"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      <span>Edit</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleDeletePayment(p.id, p.amount)}
+                      className="px-2.5 py-1.5 text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 text-xs font-semibold rounded-lg transition flex items-center gap-1 cursor-pointer"
+                      title="Delete Wrong Payment Entry"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Delete</span>
+                    </button>
+
+                    <button
+                      onClick={() => generatePaymentReceiptPDF(p, lead)}
+                      className="px-3 py-1.5 bg-[#1A3C5E] text-white text-xs font-semibold rounded-lg hover:bg-[#15304b] transition flex items-center gap-1"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      <span>PDF Receipt</span>
+                    </button>
+                  </div>
                 </div>
               ))
             )}
@@ -950,6 +1280,648 @@ export default function LeadDetailPage() {
                   className="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl shadow transition"
                 >
                   Save Kundali Profile
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Full Lead Details Modal */}
+      {showEditLeadModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 my-8 space-y-6 max-h-[90vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4 shrink-0">
+              <div>
+                <h3 className="text-xl font-bold font-serif-heading text-[#1A3C5E] flex items-center gap-2">
+                  <Edit3 className="w-5 h-5 text-amber-600" />
+                  Edit Lead Profile
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Update contact, Vedic astrological details, service interest, and pipeline stage for {lead.full_name}.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowEditLeadModal(false)}
+                className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Tab Navigation */}
+            <div className="flex items-center gap-1.5 border-b border-slate-200 pb-2 overflow-x-auto shrink-0">
+              <button
+                type="button"
+                onClick={() => setEditActiveTab('contact')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                  editActiveTab === 'contact' ? 'bg-[#1A3C5E] text-amber-300 shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <User className="w-3.5 h-3.5" /> Contact Info
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditActiveTab('service')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                  editActiveTab === 'service' ? 'bg-[#1A3C5E] text-amber-300 shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" /> Service & Stage
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditActiveTab('financials')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                  editActiveTab === 'financials' ? 'bg-[#1A3C5E] text-amber-300 shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <IndianRupee className="w-3.5 h-3.5" /> Dakshina Fees
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditActiveTab('kundali')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                  editActiveTab === 'kundali' ? 'bg-[#1A3C5E] text-amber-300 shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <Compass className="w-3.5 h-3.5" /> Vedic Kundali
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditActiveTab('notes')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                  editActiveTab === 'notes' ? 'bg-[#1A3C5E] text-amber-300 shadow-xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                <FileText className="w-3.5 h-3.5" /> Notes & Tags
+              </button>
+            </div>
+
+            {/* Form Content */}
+            <form onSubmit={handleSaveEditLead} className="space-y-6 overflow-y-auto flex-1 pr-1">
+              {/* Tab 1: Contact Info */}
+              {editActiveTab === 'contact' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Full Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={editForm.full_name}
+                        onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-amber-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Phone Number <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="tel"
+                        required
+                        value={editForm.phone}
+                        onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-amber-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">WhatsApp Number</label>
+                      <input
+                        type="tel"
+                        value={editForm.whatsapp}
+                        onChange={(e) => setEditForm({ ...editForm, whatsapp: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-amber-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
+                      <input
+                        type="email"
+                        value={editForm.email}
+                        onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-amber-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">City</label>
+                      <input
+                        type="text"
+                        value={editForm.city}
+                        onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-amber-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Country</label>
+                      <input
+                        type="text"
+                        value={editForm.country}
+                        onChange={(e) => setEditForm({ ...editForm, country: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-amber-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 2: Service & Stage */}
+              {editActiveTab === 'service' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Service Interest</label>
+                      <select
+                        value={editForm.service_interest}
+                        onChange={(e) => {
+                          const srv = SERVICE_OPTIONS.find((s) => s.key === e.target.value);
+                          setEditForm({
+                            ...editForm,
+                            service_interest: e.target.value as any,
+                            full_amount: srv ? srv.price : editForm.full_amount,
+                          });
+                        }}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-amber-500"
+                      >
+                        {SERVICE_OPTIONS.map((s) => (
+                          <option key={s.key} value={s.key}>
+                            {s.label} (₹{s.price.toLocaleString('en-IN')})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Consultation Mode</label>
+                      <select
+                        value={editForm.consultation_mode}
+                        onChange={(e) => setEditForm({ ...editForm, consultation_mode: e.target.value as any })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-amber-500"
+                      >
+                        <option value="online">Online (Zoom / Video)</option>
+                        <option value="offline_center">Offline Center / Temple</option>
+                        <option value="home_visit">Home Visit / Vastu Site</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Lead Temperature</label>
+                      <select
+                        value={editForm.lead_temperature}
+                        onChange={(e) => setEditForm({ ...editForm, lead_temperature: e.target.value as any })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-amber-500"
+                      >
+                        {LEAD_TEMPERATURES.map((t) => (
+                          <option key={t.key} value={t.key}>
+                            {t.icon} {t.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Pipeline Stage</label>
+                      <select
+                        value={editForm.stage}
+                        onChange={(e) => setEditForm({ ...editForm, stage: e.target.value as any })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-amber-500 font-bold text-amber-900"
+                      >
+                        {PIPELINE_STAGES.map((s) => (
+                          <option key={s.key} value={s.key}>
+                            {s.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Assigned Team Member</label>
+                      <select
+                        value={editForm.assigned_to}
+                        onChange={(e) => setEditForm({ ...editForm, assigned_to: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-amber-500"
+                      >
+                        <option value="">Unassigned</option>
+                        {teamMembers.map((u) => (
+                          <option key={u.id} value={u.id}>
+                            {u.full_name} ({u.role.replace('_', ' ')})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Lead Source</label>
+                      <select
+                        value={editForm.lead_source}
+                        onChange={(e) => setEditForm({ ...editForm, lead_source: e.target.value as any })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-amber-500"
+                      >
+                        {LEAD_SOURCES.map((src) => (
+                          <option key={src.key} value={src.key}>
+                            {src.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-bold text-slate-700 mb-1">
+                        Scheduled Consultation Date & Time
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={editForm.date_of_consultation}
+                        onChange={(e) => setEditForm({ ...editForm, date_of_consultation: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-amber-500 font-semibold"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 3: Financials */}
+              {editActiveTab === 'financials' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Total Full Fee / Dakshina (₹)</label>
+                      <input
+                        type="number"
+                        value={editForm.full_amount}
+                        onChange={(e) => setEditForm({ ...editForm, full_amount: Number(e.target.value) })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-amber-500 font-bold"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Amount Paid So Far (₹)</label>
+                      <input
+                        type="number"
+                        value={editForm.amount_paid}
+                        onChange={(e) => setEditForm({ ...editForm, amount_paid: Number(e.target.value) })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-amber-500 font-bold text-emerald-700"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-900 space-y-1">
+                    <p className="font-bold">Dakshina Balance Calculation:</p>
+                    <p>
+                      Balance Due: <strong className="text-red-700">{formatINR(Math.max(0, (Number(editForm.full_amount) || 0) - (Number(editForm.amount_paid) || 0)))}</strong>
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 4: Vedic Kundali */}
+              {editActiveTab === 'kundali' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Date of Birth</label>
+                      <input
+                        type="date"
+                        value={editForm.date_of_birth}
+                        onChange={(e) => setEditForm({ ...editForm, date_of_birth: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-amber-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Exact Time of Birth</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 07:45 AM"
+                        value={editForm.time_of_birth}
+                        onChange={(e) => setEditForm({ ...editForm, time_of_birth: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-amber-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Birth Place</label>
+                      <input
+                        type="text"
+                        placeholder="City, State"
+                        value={editForm.birth_place}
+                        onChange={(e) => setEditForm({ ...editForm, birth_place: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-amber-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Gender</label>
+                      <select
+                        value={editForm.gender}
+                        onChange={(e) => setEditForm({ ...editForm, gender: e.target.value as any })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-amber-500"
+                      >
+                        {GENDER_OPTIONS.map((g) => (
+                          <option key={g.key} value={g.key}>{g.label}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Relation</label>
+                      <select
+                        value={editForm.relation}
+                        onChange={(e) => setEditForm({ ...editForm, relation: e.target.value as any })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-amber-500"
+                      >
+                        {RELATION_OPTIONS.map((r) => (
+                          <option key={r.key} value={r.key}>{r.label}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Marital Status</label>
+                      <select
+                        value={editForm.marital_status}
+                        onChange={(e) => setEditForm({ ...editForm, marital_status: e.target.value as any })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-amber-500"
+                      >
+                        {MARITAL_STATUS_OPTIONS.map((m) => (
+                          <option key={m.key} value={m.key}>{m.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Moon Rashi</label>
+                      <select
+                        value={editForm.rashi}
+                        onChange={(e) => setEditForm({ ...editForm, rashi: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-amber-500"
+                      >
+                        <option value="">Select Rashi</option>
+                        {RASHI_OPTIONS.map((r) => (
+                          <option key={r} value={r}>{r}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Gotra</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Kashyap"
+                        value={editForm.gotra}
+                        onChange={(e) => setEditForm({ ...editForm, gotra: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-amber-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Occupation</label>
+                      <input
+                        type="text"
+                        placeholder="Profession"
+                        value={editForm.occupation}
+                        onChange={(e) => setEditForm({ ...editForm, occupation: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-amber-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Street Address</label>
+                      <input
+                        type="text"
+                        placeholder="Address"
+                        value={editForm.address}
+                        onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-amber-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1">Pincode</label>
+                      <input
+                        type="text"
+                        placeholder="Pincode"
+                        value={editForm.pincode}
+                        onChange={(e) => setEditForm({ ...editForm, pincode: e.target.value })}
+                        className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-amber-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Kundali & Specific Notes</label>
+                    <textarea
+                      rows={2}
+                      placeholder="Notes on Lagna, planetary positions, dasha..."
+                      value={editForm.kundali_notes}
+                      onChange={(e) => setEditForm({ ...editForm, kundali_notes: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-amber-500"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 5: Notes & Tags */}
+              {editActiveTab === 'notes' && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Internal Notes & History</label>
+                    <textarea
+                      rows={4}
+                      placeholder="Internal remarks, background notes, client requests..."
+                      value={editForm.internal_notes}
+                      onChange={(e) => setEditForm({ ...editForm, internal_notes: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-amber-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Tags (Comma separated)</label>
+                    <input
+                      type="text"
+                      placeholder="VIP, Urgent, Vastu Site, Repeat"
+                      value={editForm.tags}
+                      onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none focus:border-amber-500"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Modal Footer */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setShowEditLeadModal(false)}
+                  className="px-5 py-2.5 text-slate-600 font-semibold text-xs hover:bg-slate-100 rounded-xl transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingEdit}
+                  className="px-6 py-2.5 bg-[#1A3C5E] hover:bg-[#15304b] text-amber-400 font-bold text-xs rounded-xl shadow-lg transition flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                >
+                  {savingEdit ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Saving Updates...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Edit3 className="w-4 h-4" />
+                      <span>Save All Changes</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Payment Modal */}
+      {showEditPaymentModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 my-8">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                  <Edit3 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base">Edit Payment Entry</h3>
+                  <p className="text-xs text-slate-500">Correct receipt amount, payment mode, or reference</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowEditPaymentModal(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditPayment} className="space-y-4 pt-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Payment Amount (₹) <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  required
+                  min={1}
+                  value={editPaymentForm.amount}
+                  onChange={(e) => setEditPaymentForm({ ...editPaymentForm, amount: Number(e.target.value) })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 outline-none focus:border-amber-500"
+                />
+                <span className="text-[10px] text-slate-500">Updating this will automatically recalculate the remaining balance due.</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Payment Mode</label>
+                  <select
+                    value={editPaymentForm.payment_mode}
+                    onChange={(e) => setEditPaymentForm({ ...editPaymentForm, payment_mode: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium outline-none focus:border-amber-500"
+                  >
+                    <option value="upi">UPI (GPay / PhonePe / Paytm)</option>
+                    <option value="bank_transfer">Bank Transfer (NEFT / IMPS / RTGS)</option>
+                    <option value="cash">Cash In-Person</option>
+                    <option value="card">Debit / Credit Card</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Payment Type</label>
+                  <select
+                    value={editPaymentForm.payment_type}
+                    onChange={(e) => setEditPaymentForm({ ...editPaymentForm, payment_type: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium outline-none focus:border-amber-500"
+                  >
+                    <option value="token">Token / Advance (Booking)</option>
+                    <option value="full">Full Settlement (100%)</option>
+                    <option value="partial">Partial Installment</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Payment Date</label>
+                  <input
+                    type="date"
+                    value={editPaymentForm.payment_date}
+                    onChange={(e) => setEditPaymentForm({ ...editPaymentForm, payment_date: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">UTR / Ref / Txn No.</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. UPI-12345678"
+                    value={editPaymentForm.reference_no}
+                    onChange={(e) => setEditPaymentForm({ ...editPaymentForm, reference_no: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium outline-none focus:border-amber-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Correction Notes / Reason</label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Corrected mistyped amount entered during token collection"
+                  value={editPaymentForm.notes}
+                  onChange={(e) => setEditPaymentForm({ ...editPaymentForm, notes: e.target.value })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium outline-none focus:border-amber-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowEditPaymentModal(false)}
+                  className="px-4 py-2 text-slate-600 font-semibold text-xs hover:bg-slate-100 rounded-xl transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingPayment}
+                  className="px-5 py-2.5 bg-[#1A3C5E] hover:bg-[#15304b] text-amber-400 font-bold text-xs rounded-xl shadow-md transition flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                >
+                  {savingPayment ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Updating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      <span>Save Payment Changes</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>

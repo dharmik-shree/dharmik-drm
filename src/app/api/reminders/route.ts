@@ -11,7 +11,7 @@ export async function GET(request: Request) {
     const supabase = createAdminClient();
     let query = supabase
       .from('reminders')
-      .select('*, leads(full_name, phone, whatsapp, service_interest, date_of_consultation, consultation_mode, amount_due, stage), assigned_to_user:users!assigned_to(id, full_name, avatar_url)')
+      .select('*, leads(full_name, phone, whatsapp, service_interest, date_of_consultation, consultation_mode, amount_due, stage, deleted_at), assigned_to_user:users!assigned_to(id, full_name, avatar_url)')
       .order('scheduled_for', { ascending: true });
 
     if (leadId) {
@@ -25,17 +25,19 @@ export async function GET(request: Request) {
     const { data: reminders, error } = await query;
     if (error) throw error;
 
-    // Transform for UI compatibility
-    const formatted = (reminders || []).map((r: any) => ({
-      ...r,
-      lead_name: r.leads?.full_name || 'Client',
-      lead_phone: r.leads?.whatsapp || r.leads?.phone || '',
-      service_name: r.leads?.service_interest || '',
-      date_of_consultation: r.leads?.date_of_consultation || null,
-      consultation_mode: r.leads?.consultation_mode || 'online',
-      amount_due: r.leads?.amount_due || 0,
-      lead_stage: r.leads?.stage || '',
-    }));
+    // Transform for UI compatibility, filtering out soft-deleted leads
+    const formatted = (reminders || [])
+      .filter((r: any) => !r.leads?.deleted_at)
+      .map((r: any) => ({
+        ...r,
+        lead_name: r.leads?.full_name || 'Client',
+        lead_phone: r.leads?.whatsapp || r.leads?.phone || '',
+        service_name: r.leads?.service_interest || '',
+        date_of_consultation: r.leads?.date_of_consultation || null,
+        consultation_mode: r.leads?.consultation_mode || 'online',
+        amount_due: r.leads?.amount_due || 0,
+        lead_stage: r.leads?.stage || '',
+      }));
 
     return NextResponse.json({ success: true, reminders: formatted });
   } catch (err: any) {
