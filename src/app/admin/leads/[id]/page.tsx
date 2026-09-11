@@ -379,7 +379,7 @@ export default function LeadDetailPage() {
 
   const handleDeleteLead = async () => {
     if (!lead) return;
-    if (!confirm(`Are you sure you want to delete lead "${lead.full_name}"?\n\nThis will remove the lead and all its scheduled reminders, and return you to the leads pipeline.`)) {
+    if (!confirm(`Are you sure you want to delete lead "${lead.full_name}"?\n\nThis will remove the lead and all its scheduled reminders, and return you to all leads.`)) {
       return;
     }
     setDeleting(true);
@@ -387,8 +387,9 @@ export default function LeadDetailPage() {
       const res = await fetch(`/api/leads/${lead.id}`, { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to delete lead');
-      alert(`Lead "${lead.full_name}" and associated reminders deleted successfully.`);
-      router.push('/admin/leads');
+      
+      // Direct navigation to all leads list
+      window.location.href = '/admin/leads';
     } catch (err: any) {
       alert(err.message || 'Failed to delete lead');
       setDeleting(false);
