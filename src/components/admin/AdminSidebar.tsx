@@ -12,6 +12,7 @@ import {
   UserCog,
   Settings,
   Sparkles,
+  Flame,
   ExternalLink,
   X,
 } from 'lucide-react';
@@ -58,6 +59,12 @@ export function AdminSidebar({ userRole, userName, onClose, isMobile = false }: 
       label: 'Customers',
       href: '/admin/customers',
       icon: Users,
+      roles: ['super_admin', 'admin', 'team_member'],
+    },
+    {
+      label: 'Puja Seva & Events',
+      href: '/admin/pujas',
+      icon: Flame,
       roles: ['super_admin', 'admin', 'team_member'],
     },
     {
