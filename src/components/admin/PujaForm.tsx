@@ -15,8 +15,55 @@ import {
   Sparkles,
   CheckCircle2,
   AlertCircle,
+  HelpCircle,
+  ListOrdered,
+  RotateCcw,
+  ChevronUp,
+  ChevronDown,
 } from 'lucide-react';
-import { PujaRecord, PujaPackageRecord } from '@/types';
+import { PujaRecord, PujaPackageRecord, PujaProcessStepItem, PujaFAQItem } from '@/types';
+
+const DEFAULT_PROCESS_STEPS: PujaProcessStepItem[] = [
+  {
+    step: 1,
+    title: 'Devotee Sankalp',
+    description: 'Purohit recites your Name, Gotra, and wish before the sacred Falgu river altar.',
+  },
+  {
+    step: 2,
+    title: 'Pind Daan & Til Tarpana',
+    description: 'Authentic Vedic offerings of Barley, Til, Honey, and Milk honoring your lineage.',
+  },
+  {
+    step: 3,
+    title: 'Maha Havan & Pitru Gayatri',
+    description: 'Purifying sacred fire ceremony reciting 1008 Pitru Gayatri Mantras.',
+  },
+  {
+    step: 4,
+    title: 'WhatsApp Video & Prasad Dispatch',
+    description: 'Full HD video recording shared on your WhatsApp and consecrated Prasad dispatched.',
+  },
+];
+
+const DEFAULT_FAQS: PujaFAQItem[] = [
+  {
+    question: 'Do I need to be physically present at Gaya?',
+    answer: 'No. The Puja is performed on your behalf by authenticated Purohits using your Gotra and Name. You can watch live or view the complete uncut video recording sent to your WhatsApp.',
+  },
+  {
+    question: 'What if I do not know my Gotra?',
+    answer: 'In Sanatan Dharma traditions, if you do not know your Gotra, Panditji will take the universal Kashyap Gotra Sankalp on your behalf, which is fully valid and auspicious.',
+  },
+  {
+    question: 'When and how will I receive the meeting link?',
+    answer: 'On the morning of the Puja day, our team will send the personalized joining link to your registered WhatsApp number and Email.',
+  },
+  {
+    question: 'How will I receive the consecrated Prasad?',
+    answer: 'The consecrated Prasad and Aashirwad Box will be packed in a sacred sanctified container and dispatched via premium courier directly to your home address.',
+  },
+];
 
 interface PujaFormProps {
   initialPuja?: PujaRecord;
@@ -110,6 +157,20 @@ export default function PujaForm({ initialPuja, isEdit = false }: PujaFormProps)
         ]
   );
 
+  // Vedic Process Steps Builder
+  const [processSteps, setProcessSteps] = useState<PujaProcessStepItem[]>(
+    initialPuja?.process_steps && initialPuja.process_steps.length > 0
+      ? initialPuja.process_steps
+      : DEFAULT_PROCESS_STEPS
+  );
+
+  // FAQs Builder (Sensible fixed defaults loaded, fully customizable per puja)
+  const [faqs, setFaqs] = useState<PujaFAQItem[]>(
+    initialPuja?.faqs && initialPuja.faqs.length > 0
+      ? initialPuja.faqs
+      : DEFAULT_FAQS
+  );
+
   const handleTitleChange = (val: string) => {
     setTitle(val);
     if (!isEdit && !slug) {
@@ -148,6 +209,88 @@ export default function PujaForm({ initialPuja, isEdit = false }: PujaFormProps)
     setPackages(updated);
   };
 
+  // Process Steps Handlers
+  const handleAddProcessStep = () => {
+    setProcessSteps([
+      ...processSteps,
+      {
+        step: processSteps.length + 1,
+        title: '',
+        description: '',
+      },
+    ]);
+  };
+
+  const handleRemoveProcessStep = (index: number) => {
+    const updated = processSteps.filter((_, i) => i !== index);
+    setProcessSteps(updated.map((s, idx) => ({ ...s, step: idx + 1 })));
+  };
+
+  const handleProcessStepChange = (index: number, field: 'title' | 'description', value: string) => {
+    const updated = [...processSteps];
+    updated[index] = { ...updated[index], [field]: value };
+    setProcessSteps(updated);
+  };
+
+  const handleMoveProcessStep = (index: number, direction: 'up' | 'down') => {
+    if (direction === 'up' && index === 0) return;
+    if (direction === 'down' && index === processSteps.length - 1) return;
+
+    const targetIdx = direction === 'up' ? index - 1 : index + 1;
+    const updated = [...processSteps];
+    const temp = updated[index];
+    updated[index] = updated[targetIdx];
+    updated[targetIdx] = temp;
+
+    setProcessSteps(updated.map((s, idx) => ({ ...s, step: idx + 1 })));
+  };
+
+  const handleResetProcessSteps = () => {
+    if (confirm('Reset Vedic process steps to the standard 4-step template?')) {
+      setProcessSteps(DEFAULT_PROCESS_STEPS);
+    }
+  };
+
+  // FAQ Handlers
+  const handleAddFaq = () => {
+    setFaqs([
+      ...faqs,
+      {
+        question: '',
+        answer: '',
+      },
+    ]);
+  };
+
+  const handleRemoveFaq = (index: number) => {
+    setFaqs(faqs.filter((_, i) => i !== index));
+  };
+
+  const handleFaqChange = (index: number, field: 'question' | 'answer', value: string) => {
+    const updated = [...faqs];
+    updated[index] = { ...updated[index], [field]: value };
+    setFaqs(updated);
+  };
+
+  const handleMoveFaq = (index: number, direction: 'up' | 'down') => {
+    if (direction === 'up' && index === 0) return;
+    if (direction === 'down' && index === faqs.length - 1) return;
+
+    const targetIdx = direction === 'up' ? index - 1 : index + 1;
+    const updated = [...faqs];
+    const temp = updated[index];
+    updated[index] = updated[targetIdx];
+    updated[targetIdx] = temp;
+
+    setFaqs(updated);
+  };
+
+  const handleResetFaqs = () => {
+    if (confirm('Reset FAQs to standard fixed defaults?')) {
+      setFaqs(DEFAULT_FAQS);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
@@ -170,6 +313,8 @@ export default function PujaForm({ initialPuja, isEdit = false }: PujaFormProps)
         is_active: isActive,
         event_date: new Date(eventDate).toISOString(),
         enrollment_end_date: new Date(enrollmentEndDate).toISOString(),
+        process_steps: processSteps.filter((s) => s.title.trim() !== ''),
+        faqs: faqs.filter((f) => f.question.trim() !== ''),
         packages: packages.map((pkg, idx) => ({
           ...pkg,
           price: Number(pkg.price),
@@ -644,6 +789,246 @@ export default function PujaForm({ initialPuja, isEdit = false }: PujaFormProps)
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* SECTION 4: Vedic Process Steps Builder ("How the Puja is Performed Step-by-Step") */}
+      <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-xs space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+          <div>
+            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <ListOrdered className="w-4 h-4 text-[#B88E4B]" />
+              <span>Vedic Process Steps (&ldquo;How the Puja is Performed Step-by-Step&rdquo;)</span>
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              These steps are displayed under the Vedic Process tab on the website (Screenshot 1). You can add, edit, reorder, or delete steps.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleResetProcessSteps}
+              className="px-2.5 py-1.5 border border-slate-200 hover:bg-slate-100 text-slate-600 text-xs font-medium rounded-lg flex items-center gap-1 transition-colors"
+              title="Reset to 4 standard Vedic ritual steps"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Reset Template</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleAddProcessStep}
+              className="px-3 py-1.5 bg-[#B88E4B] hover:bg-[#a67d3d] text-white text-xs font-semibold rounded-lg flex items-center gap-1 transition-colors shadow-xs"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add Step</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          {processSteps.length === 0 ? (
+            <div className="text-center py-8 border border-dashed border-slate-200 rounded-xl text-xs text-slate-500">
+              No steps defined. Click &ldquo;Add Step&rdquo; or &ldquo;Reset Template&rdquo; to add standard Vedic ritual steps.
+            </div>
+          ) : (
+            processSteps.map((stepItem, idx) => (
+              <div
+                key={idx}
+                className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 space-y-3 text-left relative"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-7 h-7 rounded-full bg-[#B88E4B] text-white font-bold text-xs flex items-center justify-center shadow-xs">
+                      {idx + 1}
+                    </span>
+                    <span className="text-xs font-bold text-slate-700">
+                      Step #{idx + 1}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      disabled={idx === 0}
+                      onClick={() => handleMoveProcessStep(idx, 'up')}
+                      className="p-1 text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors"
+                      title="Move Up"
+                    >
+                      <ChevronUp className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={idx === processSteps.length - 1}
+                      onClick={() => handleMoveProcessStep(idx, 'down')}
+                      className="p-1 text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors"
+                      title="Move Down"
+                    >
+                      <ChevronDown className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveProcessStep(idx)}
+                      className="text-slate-400 hover:text-red-600 transition-colors p-1 ml-1"
+                      title="Remove Step"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                      Step Title *
+                    </label>
+                    <input
+                      type="text"
+                      value={stepItem.title}
+                      onChange={(e) => handleProcessStepChange(idx, 'title', e.target.value)}
+                      placeholder="e.g. Devotee Sankalp"
+                      required
+                      className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:outline-none focus:border-blue-600"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                      Step Description / Vedic Action *
+                    </label>
+                    <textarea
+                      value={stepItem.description}
+                      onChange={(e) => handleProcessStepChange(idx, 'description', e.target.value)}
+                      placeholder="e.g. Purohit recites your Name, Gotra, and wish before the sacred Falgu river altar."
+                      rows={2}
+                      required
+                      className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:outline-none focus:border-blue-600"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* SECTION 5: Frequently Asked Questions (FAQs) */}
+      <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-xs space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+          <div>
+            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <HelpCircle className="w-4 h-4 text-amber-600" />
+              <span>Frequently Asked Questions (FAQs)</span>
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Fixed standard temple defaults are automatically pre-populated (Screenshot 2). Admin can edit, add, or delete questions according to needs.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleResetFaqs}
+              className="px-2.5 py-1.5 border border-slate-200 hover:bg-slate-100 text-slate-600 text-xs font-medium rounded-lg flex items-center gap-1 transition-colors"
+              title="Reset to fixed standard default FAQs"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Reset Default FAQs</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleAddFaq}
+              className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1 transition-colors shadow-xs"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Add FAQ</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          {faqs.length === 0 ? (
+            <div className="text-center py-8 border border-dashed border-slate-200 rounded-xl text-xs text-slate-500">
+              No FAQs defined. Click &ldquo;Add FAQ&rdquo; or &ldquo;Reset Default FAQs&rdquo; to load fixed temple questions.
+            </div>
+          ) : (
+            faqs.map((faq, idx) => (
+              <div
+                key={idx}
+                className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 space-y-3 text-left relative"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-full border border-amber-600 text-amber-700 font-bold text-xs flex items-center justify-center bg-amber-50">
+                      ?
+                    </span>
+                    <span className="text-xs font-bold text-slate-700">
+                      FAQ #{idx + 1}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      disabled={idx === 0}
+                      onClick={() => handleMoveFaq(idx, 'up')}
+                      className="p-1 text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors"
+                      title="Move Up"
+                    >
+                      <ChevronUp className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={idx === faqs.length - 1}
+                      onClick={() => handleMoveFaq(idx, 'down')}
+                      className="p-1 text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors"
+                      title="Move Down"
+                    >
+                      <ChevronDown className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveFaq(idx)}
+                      className="text-slate-400 hover:text-red-600 transition-colors p-1 ml-1"
+                      title="Remove FAQ"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                      Question *
+                    </label>
+                    <input
+                      type="text"
+                      value={faq.question}
+                      onChange={(e) => handleFaqChange(idx, 'question', e.target.value)}
+                      placeholder="e.g. Do I need to be physically present at Gaya?"
+                      required
+                      className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:outline-none focus:border-blue-600 font-medium text-slate-800"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                      Answer *
+                    </label>
+                    <textarea
+                      value={faq.answer}
+                      onChange={(e) => handleFaqChange(idx, 'answer', e.target.value)}
+                      placeholder="e.g. No. The Puja is performed on your behalf by authenticated Purohits..."
+                      rows={3}
+                      required
+                      className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:outline-none focus:border-blue-600"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 

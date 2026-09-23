@@ -30,12 +30,44 @@ export const INITIAL_MOCK_PUJAS: PujaRecord[] = [
       { title: 'Doorstep Tirth Prasad Delivery', description: 'Receive an authentic Aashirwad Box with sacred Falgu-Ganga Jal.' },
     ],
     process_steps: [
-      { step: 1, title: 'Devotee Sankalp', description: 'Purohit recites your Name and Gotra before altar.' },
-      { step: 2, title: 'Pind Daan & Til Tarpana', description: 'Authentic Vedic offerings of Barley and Til.' },
-      { step: 3, title: 'Maha Havan', description: 'Purifying fire ceremony with 1008 Pitru Gayatri Mantras.' },
+      {
+        step: 1,
+        title: 'Devotee Sankalp',
+        description: 'Purohit recites your Name, Gotra, and wish before the sacred Falgu river altar.',
+      },
+      {
+        step: 2,
+        title: 'Pind Daan & Til Tarpana',
+        description: 'Authentic Vedic offerings of Barley, Til, Honey, and Milk honoring your lineage.',
+      },
+      {
+        step: 3,
+        title: 'Maha Havan & Pitru Gayatri',
+        description: 'Purifying sacred fire ceremony reciting 1008 Pitru Gayatri Mantras.',
+      },
+      {
+        step: 4,
+        title: 'WhatsApp Video & Prasad Dispatch',
+        description: 'Full HD video recording shared on your WhatsApp and consecrated Prasad dispatched.',
+      },
     ],
     faqs: [
-      { question: 'Do I need to attend physically?', answer: 'No, Panditji takes Sankalp with your Gotra and Name with full video proof.' },
+      {
+        question: 'Do I need to be physically present at Gaya?',
+        answer: 'No. The Puja is performed on your behalf by authenticated Purohits using your Gotra and Name. You can watch live or view the complete uncut video recording sent to your WhatsApp.',
+      },
+      {
+        question: 'What if I do not know my Gotra?',
+        answer: 'In Sanatan Dharma traditions, if you do not know your Gotra, Panditji will take the universal Kashyap Gotra Sankalp on your behalf, which is fully valid and auspicious.',
+      },
+      {
+        question: 'When and how will I receive the meeting link?',
+        answer: 'On the morning of the Puja day, our team will send the personalized joining link to your registered WhatsApp number and Email.',
+      },
+      {
+        question: 'How will I receive the consecrated Prasad?',
+        answer: 'The consecrated Prasad and Aashirwad Box will be packed in a sacred sanctified container and dispatched via premium courier directly to your home address.',
+      },
     ],
     display_order: 1,
     enrollments_count: 8,
@@ -116,7 +148,20 @@ export const INITIAL_MOCK_PUJAS: PujaRecord[] = [
       { title: 'Arogya & Longevity', description: 'Invokes Lord Shiva for immunity and vital energy.' },
     ],
     process_steps: [
-      { step: 1, title: 'Sankalp', description: 'Opening blessings for removal of all obstacles.' },
+      { step: 1, title: 'Sankalp & Ganapati Puja', description: 'Opening blessings for removal of all obstacles.' },
+      { step: 2, title: 'Laghu Rudra & Namakam', description: '11 Brahmins chant the supreme Vedic hymns on the Jyotirlinga.' },
+      { step: 3, title: 'Maha Mrityunjaya Havan', description: '1008 oblations with Bilva leaves and holy herbs.' },
+      { step: 4, title: 'Bhasma Prasad Dispatch', description: 'Holy Bhasma and consecrated Rudraksha sent to your address.' },
+    ],
+    faqs: [
+      {
+        question: 'Do I need to be physically present at the temple?',
+        answer: 'No. The Puja is performed on your behalf by authenticated Purohits using your Gotra and Name. You can watch live or view the complete uncut video recording sent to your WhatsApp.',
+      },
+      {
+        question: 'Can I enroll for my elderly parents?',
+        answer: 'Yes, you can register in the name of parents or family members. Simply specify their names and relation in the enrollment form.',
+      },
     ],
     display_order: 2,
     enrollments_count: 5,
