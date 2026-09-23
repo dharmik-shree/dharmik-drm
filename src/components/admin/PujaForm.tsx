@@ -20,6 +20,13 @@ import {
   RotateCcw,
   ChevronUp,
   ChevronDown,
+  Upload,
+  Image as ImageIcon,
+  Loader2,
+  X,
+  Star,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { PujaRecord, PujaPackageRecord, PujaProcessStepItem, PujaFAQItem } from '@/types';
 
@@ -84,6 +91,20 @@ export default function PujaForm({ initialPuja, isEdit = false }: PujaFormProps)
   const [bannerImageUrl, setBannerImageUrl] = useState(
     initialPuja?.banner_image_url || 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=1200&q=80'
   );
+  const [galleryImages, setGalleryImages] = useState<string[]>(
+    initialPuja?.gallery_images && Array.isArray(initialPuja.gallery_images)
+      ? initialPuja.gallery_images
+      : [
+          'https://images.unsplash.com/photo-1544816155-12df9643f363?w=800&q=80',
+          'https://images.unsplash.com/photo-1609342122563-a43ac8917a3a?w=800&q=80',
+          'https://images.unsplash.com/photo-1519817650390-64a93db51149?w=800&q=80',
+        ]
+  );
+  const [isUploadingBanner, setIsUploadingBanner] = useState(false);
+  const [isUploadingGallery, setIsUploadingGallery] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const [newGalleryUrlInput, setNewGalleryUrlInput] = useState('');
+  const [showAddUrlInput, setShowAddUrlInput] = useState(false);
   const [locationName, setLocationName] = useState(initialPuja?.location_name || '');
   const [tithiDetails, setTithiDetails] = useState(initialPuja?.tithi_details || '');
   const [startingPrice, setStartingPrice] = useState(initialPuja?.starting_price || 851);
@@ -209,6 +230,94 @@ export default function PujaForm({ initialPuja, isEdit = false }: PujaFormProps)
     setPackages(updated);
   };
 
+  // Image Upload Handlers
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingBanner(true);
+    setUploadError('');
+
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+      const res = await fetch('/api/admin/pujas/upload', {
+        method: 'POST',
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to upload banner image');
+      if (data.url) {
+        setBannerImageUrl(data.url);
+      }
+    } catch (err: any) {
+      setUploadError(err.message || 'Failed to upload banner image');
+    } finally {
+      setIsUploadingBanner(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setIsUploadingGallery(true);
+    setUploadError('');
+
+    try {
+      const fd = new FormData();
+      Array.from(files).forEach((file) => fd.append('files', file));
+      const res = await fetch('/api/admin/pujas/upload', {
+        method: 'POST',
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to upload gallery photos');
+      if (data.urls && data.urls.length > 0) {
+        setGalleryImages((prev) => [...prev, ...data.urls]);
+      }
+    } catch (err: any) {
+      setUploadError(err.message || 'Failed to upload gallery photos');
+    } finally {
+      setIsUploadingGallery(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleAddGalleryUrl = () => {
+    if (!newGalleryUrlInput.trim()) return;
+    setGalleryImages((prev) => [...prev, newGalleryUrlInput.trim()]);
+    setNewGalleryUrlInput('');
+    setShowAddUrlInput(false);
+  };
+
+  const handleRemoveGalleryImage = (index: number) => {
+    setGalleryImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSetAsBanner = (index: number) => {
+    const selected = galleryImages[index];
+    const oldBanner = bannerImageUrl;
+    setBannerImageUrl(selected);
+    const updated = [...galleryImages];
+    if (oldBanner && !updated.includes(oldBanner)) {
+      updated[index] = oldBanner;
+    } else {
+      updated.splice(index, 1);
+    }
+    setGalleryImages(updated);
+  };
+
+  const handleMoveGalleryImage = (index: number, direction: 'left' | 'right') => {
+    if (direction === 'left' && index === 0) return;
+    if (direction === 'right' && index === galleryImages.length - 1) return;
+    const targetIdx = direction === 'left' ? index - 1 : index + 1;
+    const updated = [...galleryImages];
+    const temp = updated[index];
+    updated[index] = updated[targetIdx];
+    updated[targetIdx] = temp;
+    setGalleryImages(updated);
+  };
+
   // Process Steps Handlers
   const handleAddProcessStep = () => {
     setProcessSteps([
@@ -304,6 +413,7 @@ export default function PujaForm({ initialPuja, isEdit = false }: PujaFormProps)
         short_description: shortDescription,
         description,
         banner_image_url: bannerImageUrl,
+        gallery_images: galleryImages,
         location_name: locationName,
         tithi_details: tithiDetails,
         starting_price: Number(startingPrice),
@@ -489,21 +599,6 @@ export default function PujaForm({ initialPuja, isEdit = false }: PujaFormProps)
             />
           </div>
 
-          {/* Banner Image URL */}
-          <div className="sm:col-span-2">
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Banner Image URL *
-            </label>
-            <input
-              type="url"
-              value={bannerImageUrl}
-              onChange={(e) => setBannerImageUrl(e.target.value)}
-              placeholder="https://images.unsplash.com/..."
-              required
-              className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-blue-600"
-            />
-          </div>
-
           {/* Short Description */}
           <div className="sm:col-span-2">
             <label className="block text-xs font-semibold text-slate-700 mb-1">
@@ -534,7 +629,258 @@ export default function PujaForm({ initialPuja, isEdit = false }: PujaFormProps)
         </div>
       </div>
 
-      {/* SECTION 2: Dates, Status & Live Meeting Stream */}
+      {/* SECTION 2: Media, Main Banner & Photo Gallery */}
+      <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-xs space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+          <div>
+            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <ImageIcon className="w-4 h-4 text-purple-600" />
+              <span>Puja Media: Main Banner & Photo Gallery</span>
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Upload real temple, pandit, and havan photos. The banner is featured on the hero visual, and gallery photos show as clickable thumbnails (Thumbnails 1, 2, 3...) on the devotee website.
+            </p>
+          </div>
+        </div>
+
+        {uploadError && (
+          <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{uploadError}</span>
+          </div>
+        )}
+
+        {/* 1. Main Banner Image */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <label className="block text-xs font-bold text-slate-800">
+              1. Main Featured Banner Image *
+            </label>
+            <span className="text-[11px] text-slate-400">
+              Required for website hero banner slider & main card
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
+            {/* Live Banner Preview */}
+            <div className="md:col-span-5 relative aspect-[16/9] w-full rounded-xl overflow-hidden border border-slate-200 bg-slate-100 shadow-xs group">
+              {bannerImageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={bannerImageUrl}
+                  alt="Banner Preview"
+                  className="w-full h-full object-cover object-center"
+                />
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 text-xs gap-1">
+                  <ImageIcon className="w-8 h-8 opacity-40" />
+                  <span>No banner selected</span>
+                </div>
+              )}
+              <div className="absolute top-2 left-2 bg-slate-900/80 backdrop-blur-md text-white text-[10px] font-semibold px-2 py-0.5 rounded">
+                Main Banner
+              </div>
+            </div>
+
+            {/* Controls */}
+            <div className="md:col-span-7 space-y-3 text-left">
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="cursor-pointer px-4 py-2 bg-purple-700 hover:bg-purple-800 text-white text-xs font-semibold rounded-lg flex items-center gap-2 shadow-xs transition-colors">
+                  {isUploadingBanner ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Uploading to Cloud...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4" />
+                      <span>Upload Banner Image</span>
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={isUploadingBanner}
+                    onChange={handleBannerUpload}
+                    className="hidden"
+                  />
+                </label>
+                <span className="text-xs text-slate-400">or enter direct URL below:</span>
+              </div>
+
+              <div>
+                <input
+                  type="url"
+                  value={bannerImageUrl}
+                  onChange={(e) => setBannerImageUrl(e.target.value)}
+                  placeholder="https://images.unsplash.com/... or Supabase storage URL"
+                  required
+                  className="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:outline-none focus:border-blue-600 font-mono"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Stored directly in Supabase cloud storage bucket: <span className="font-semibold text-slate-600">pujas</span>.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 2. Photo Gallery & Devotee Thumbnails */}
+        <div className="space-y-3 pt-3 border-t border-slate-100">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <label className="block text-xs font-bold text-slate-800">
+                2. Puja Photo Gallery & Devotee Thumbnails ({galleryImages.length} photos)
+              </label>
+              <p className="text-[11px] text-slate-500">
+                These photos appear directly under the main banner as clickable thumbnails (Thumbnail 1, 2, 3...) on the Puja detail page.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <label className="cursor-pointer px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 shadow-xs transition-colors">
+                {isUploadingGallery ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Uploading...</span>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="w-3.5 h-3.5" />
+                    <span>Upload Gallery Photos</span>
+                  </>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  disabled={isUploadingGallery}
+                  onChange={handleGalleryUpload}
+                  className="hidden"
+                />
+              </label>
+
+              <button
+                type="button"
+                onClick={() => setShowAddUrlInput(!showAddUrlInput)}
+                className="px-2.5 py-1.5 border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-medium rounded-lg flex items-center gap-1"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add URL</span>
+              </button>
+            </div>
+          </div>
+
+          {showAddUrlInput && (
+            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 flex items-center gap-2">
+              <input
+                type="url"
+                value={newGalleryUrlInput}
+                onChange={(e) => setNewGalleryUrlInput(e.target.value)}
+                placeholder="Paste image URL (https://...)"
+                className="flex-1 px-3 py-1.5 text-xs rounded border border-slate-300 bg-white"
+              />
+              <button
+                type="button"
+                onClick={handleAddGalleryUrl}
+                className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700"
+              >
+                Add
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setNewGalleryUrlInput('');
+                  setShowAddUrlInput(false);
+                }}
+                className="px-2 py-1.5 text-slate-400 hover:text-slate-600 text-xs"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+
+          {/* Gallery Thumbnails Grid */}
+          {galleryImages.length === 0 ? (
+            <div className="p-6 border-2 border-dashed border-slate-200 rounded-xl text-center space-y-2 bg-slate-50/50">
+              <ImageIcon className="w-8 h-8 mx-auto text-slate-400" />
+              <p className="text-xs text-slate-600 font-medium">No gallery photos added yet</p>
+              <p className="text-[11px] text-slate-400 max-w-sm mx-auto">
+                Upload 2-4 sacred photos (altar, Vedic pandits, sacred fire, prasad preparation) to show as devotee thumbnails.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3 pt-1">
+              {galleryImages.map((imgUrl, idx) => (
+                <div
+                  key={idx}
+                  className="group relative rounded-lg overflow-hidden border border-slate-200 bg-white shadow-xs aspect-square flex flex-col justify-between"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={imgUrl}
+                    alt={`Gallery ${idx + 1}`}
+                    className="w-full h-full object-cover object-center"
+                  />
+
+                  {/* Thumbnail Number Badge */}
+                  <div className="absolute top-1.5 left-1.5 bg-slate-900/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                    #{idx + 1}
+                  </div>
+
+                  {/* Action Bar on Hover */}
+                  <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-1.5">
+                    <div className="flex justify-between items-center">
+                      <button
+                        type="button"
+                        onClick={() => handleSetAsBanner(idx)}
+                        className="p-1 bg-amber-500 hover:bg-amber-600 text-white rounded text-[10px] flex items-center gap-0.5"
+                        title="Set as Main Banner"
+                      >
+                        <Star className="w-3 h-3 fill-white" />
+                        <span className="text-[9px]">Banner</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveGalleryImage(idx)}
+                        className="p-1 bg-red-600 hover:bg-red-700 text-white rounded"
+                        title="Remove photo"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+
+                    <div className="flex justify-between items-center">
+                      <button
+                        type="button"
+                        disabled={idx === 0}
+                        onClick={() => handleMoveGalleryImage(idx, 'left')}
+                        className="p-1 bg-white/80 hover:bg-white text-slate-800 rounded disabled:opacity-30 text-[10px]"
+                        title="Move Left"
+                      >
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={idx === galleryImages.length - 1}
+                        onClick={() => handleMoveGalleryImage(idx, 'right')}
+                        className="p-1 bg-white/80 hover:bg-white text-slate-800 rounded disabled:opacity-30 text-[10px]"
+                        title="Move Right"
+                      >
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* SECTION 3: Dates, Status & Live Meeting Stream */}
       <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-xs space-y-5">
         <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
           <Calendar className="w-4 h-4 text-blue-600" />
@@ -634,7 +980,7 @@ export default function PujaForm({ initialPuja, isEdit = false }: PujaFormProps)
         </div>
       </div>
 
-      {/* SECTION 3: Dynamic Packages Builder */}
+      {/* SECTION 4: Dynamic Packages Builder */}
       <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-xs space-y-5">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div>
@@ -792,7 +1138,7 @@ export default function PujaForm({ initialPuja, isEdit = false }: PujaFormProps)
         </div>
       </div>
 
-      {/* SECTION 4: Vedic Process Steps Builder ("How the Puja is Performed Step-by-Step") */}
+      {/* SECTION 5: Vedic Process Steps Builder ("How the Puja is Performed Step-by-Step") */}
       <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-xs space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
           <div>
@@ -912,7 +1258,7 @@ export default function PujaForm({ initialPuja, isEdit = false }: PujaFormProps)
         </div>
       </div>
 
-      {/* SECTION 5: Frequently Asked Questions (FAQs) */}
+      {/* SECTION 6: Frequently Asked Questions (FAQs) */}
       <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-xs space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
           <div>
