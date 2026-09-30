@@ -1,5 +1,71 @@
-import { PujaRecord, PujaPackageRecord, PujaEnrollmentRecord, PujaEnrollmentPaymentStatus } from '@/types';
+import { PujaRecord, PujaPackageRecord, PujaEnrollmentRecord, PujaEnrollmentPaymentStatus, PujaPackageType } from '@/types';
 import { createAdminClient } from '@/lib/supabase/server';
+import { randomUUID } from 'crypto';
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function isUUID(val?: string | null): boolean {
+  return typeof val === 'string' && UUID_REGEX.test(val);
+}
+
+function sanitizePujaPayload(data: Partial<PujaRecord>, targetId: string): Record<string, any> {
+  const result: Record<string, any> = {
+    id: targetId,
+    title: data.title?.trim() || 'Untitled Puja',
+    slug: data.slug?.trim() || `puja-${Date.now()}`,
+    subtitle: data.subtitle || '',
+    short_description: data.short_description || '',
+    description: data.description || '',
+    banner_image_url: data.banner_image_url?.trim() || '',
+    gallery_images: Array.isArray(data.gallery_images)
+      ? data.gallery_images.filter((img) => typeof img === 'string' && img.trim() !== '')
+      : [],
+    event_date: data.event_date ? new Date(data.event_date).toISOString() : new Date().toISOString(),
+    enrollment_end_date: data.enrollment_end_date
+      ? new Date(data.enrollment_end_date).toISOString()
+      : new Date().toISOString(),
+    location_name: data.location_name?.trim() || 'Sacred Temple',
+    tithi_details: data.tithi_details || '',
+    starting_price: Number(data.starting_price) || 0,
+    puja_status: data.puja_status || 'upcoming',
+    is_featured: data.is_featured ?? true,
+    is_active: data.is_active ?? true,
+    meeting_link: data.meeting_link || '',
+    benefits: Array.isArray(data.benefits) ? data.benefits : [],
+    process_steps: Array.isArray(data.process_steps) ? data.process_steps : [],
+    faqs: Array.isArray(data.faqs) ? data.faqs : [],
+    display_order: Number(data.display_order) || 1,
+    updated_at: new Date().toISOString(),
+  };
+
+  return result;
+}
+
+function sanitizePackages(packages: Partial<PujaPackageRecord>[], pujaId: string): PujaPackageRecord[] {
+  const validTypes: PujaPackageType[] = ['single', 'couple', 'family', 'group'];
+  return packages.map((pkg, idx) => {
+    const pkgId = isUUID(pkg.id) ? pkg.id! : randomUUID();
+    const pkgType = validTypes.includes(pkg.package_type as any) ? (pkg.package_type as PujaPackageType) : 'single';
+
+    const item: PujaPackageRecord = {
+      id: pkgId,
+      puja_id: pujaId,
+      name: pkg.name?.trim() || `Package #${idx + 1}`,
+      package_type: pkgType,
+      max_persons: Math.max(1, Number(pkg.max_persons) || 1),
+      price: Math.max(0, Number(pkg.price) || 0),
+      inclusions: Array.isArray(pkg.inclusions) ? pkg.inclusions : [],
+      display_order: Number(pkg.display_order) || idx + 1,
+      is_active: pkg.is_active !== false,
+    };
+
+    if (pkg.original_price) item.original_price = Number(pkg.original_price);
+    if (pkg.badge_text?.trim()) item.badge_text = pkg.badge_text.trim();
+    if (pkg.description?.trim()) item.description = pkg.description.trim();
+
+    return item;
+  });
+}
 
 // In-memory store fallback for offline/development if DB table not yet created
 export const INITIAL_MOCK_PUJAS: PujaRecord[] = [
@@ -299,23 +365,36 @@ export async function fetchAdminPujas(): Promise<PujaRecord[]> {
       .select('*')
       .order('display_order', { ascending: true });
 
-    if (error || !pujasData || pujasData.length === 0) {
+    if (error) {
+      console.warn('Error fetching pujas from Supabase, using fallback:', error);
       return inMemoryPujas;
+    }
+
+    if (!pujasData) {
+      return [];
     }
 
     const pujaIds = pujasData.map((p) => p.id);
 
     // Fetch packages
-    const { data: packagesData } = await supabase
+    const { data: packagesData, error: pkgErr } = await supabase
       .from('puja_packages')
       .select('*')
       .in('puja_id', pujaIds)
       .order('display_order', { ascending: true });
 
+    if (pkgErr) {
+      console.warn('Error fetching packages from Supabase:', pkgErr);
+    }
+
     // Fetch enrollment stats
-    const { data: enrollmentsData } = await supabase
+    const { data: enrollmentsData, error: enrErr } = await supabase
       .from('puja_enrollments')
       .select('puja_id, payment_status, payment_amount_collected');
+
+    if (enrErr) {
+      console.warn('Error fetching enrollments stats:', enrErr);
+    }
 
     return pujasData.map((puja) => {
       const relatedEnrollments = (enrollmentsData || []).filter((e) => e.puja_id === puja.id);
@@ -364,39 +443,59 @@ export async function fetchAdminPujaById(id: string): Promise<PujaRecord | null>
   }
 }
 
-export async function saveAdminPuja(data: Partial<PujaRecord>, packages: Partial<PujaPackageRecord>[] = []): Promise<PujaRecord> {
-  const isNew = !data.id;
-  const pujaId = data.id || `puja-${Date.now()}`;
-
-  const pujaPayload = {
-    ...data,
-    id: pujaId,
-    updated_at: new Date().toISOString(),
-  };
+export async function saveAdminPuja(
+  data: Partial<PujaRecord>,
+  packages: Partial<PujaPackageRecord>[] = []
+): Promise<PujaRecord> {
+  const isNew = !data.id || !isUUID(data.id);
+  const pujaId = isUUID(data.id) ? data.id! : randomUUID();
+  const pujaPayload = sanitizePujaPayload(data, pujaId);
+  const cleanPackages = sanitizePackages(packages, pujaId);
 
   try {
     const supabase = createAdminClient();
 
     if (isNew) {
+      // Avoid duplicate slug if a puja with this slug already exists
+      const { data: existingSlug } = await supabase
+        .from('pujas')
+        .select('id')
+        .eq('slug', pujaPayload.slug)
+        .maybeSingle();
+
+      if (existingSlug) {
+        pujaPayload.slug = `${pujaPayload.slug}-${Math.random().toString(36).substring(2, 6)}`;
+      }
+
       const { data: insertedPuja, error: pErr } = await supabase
         .from('pujas')
         .insert([{ ...pujaPayload, created_at: new Date().toISOString() }])
         .select()
         .single();
 
-      if (pErr) throw pErr;
-
-      // Insert packages
-      if (packages.length > 0) {
-        const pkgInserts = packages.map((pkg, idx) => ({
-          ...pkg,
-          puja_id: pujaId,
-          display_order: idx + 1,
-        }));
-        await supabase.from('puja_packages').insert(pkgInserts);
+      if (pErr) {
+        console.error('Error inserting puja into Supabase:', pErr);
+        throw new Error(`Failed to create puja: ${pErr.message}`);
       }
 
-      return insertedPuja;
+      if (cleanPackages.length > 0) {
+        const { error: pkgErr } = await supabase.from('puja_packages').insert(cleanPackages);
+        if (pkgErr) {
+          console.error('Error inserting packages into Supabase:', pkgErr);
+          throw new Error(`Failed to save packages: ${pkgErr.message}`);
+        }
+      }
+
+      const fullPuja: PujaRecord = {
+        ...insertedPuja,
+        packages: cleanPackages,
+        enrollments_count: 0,
+        revenue_collected: 0,
+      };
+
+      // Keep in-memory store in sync as well
+      inMemoryPujas.unshift(fullPuja);
+      return fullPuja;
     } else {
       const { data: updatedPuja, error: uErr } = await supabase
         .from('pujas')
@@ -405,58 +504,81 @@ export async function saveAdminPuja(data: Partial<PujaRecord>, packages: Partial
         .select()
         .single();
 
-      if (uErr) throw uErr;
-
-      // Delete existing packages and re-insert
-      await supabase.from('puja_packages').delete().eq('puja_id', pujaId);
-      if (packages.length > 0) {
-        const pkgInserts = packages.map((pkg, idx) => ({
-          ...pkg,
-          id: pkg.id?.startsWith('pkg-') ? undefined : pkg.id,
-          puja_id: pujaId,
-          display_order: idx + 1,
-        }));
-        await supabase.from('puja_packages').insert(pkgInserts);
+      if (uErr) {
+        console.error('Error updating puja in Supabase:', uErr);
+        throw new Error(`Failed to update puja: ${uErr.message}`);
       }
 
-      return updatedPuja;
+      // Upsert packages
+      if (cleanPackages.length > 0) {
+        const { error: upsertErr } = await supabase.from('puja_packages').upsert(cleanPackages);
+        if (upsertErr) {
+          console.error('Error upserting packages in Supabase:', upsertErr);
+          throw new Error(`Failed to update packages: ${upsertErr.message}`);
+        }
+
+        // Delete removed packages
+        const keepIds = cleanPackages.map((p) => p.id);
+        const { error: delErr } = await supabase
+          .from('puja_packages')
+          .delete()
+          .eq('puja_id', pujaId)
+          .not('id', 'in', `(${keepIds.join(',')})`);
+
+        if (delErr) {
+          console.warn('Notice removing old packages:', delErr);
+        }
+      } else {
+        await supabase.from('puja_packages').delete().eq('puja_id', pujaId);
+      }
+
+      const fullPuja: PujaRecord = {
+        ...updatedPuja,
+        packages: cleanPackages,
+      };
+
+      // Keep in-memory store in sync
+      const memIdx = inMemoryPujas.findIndex((p) => p.id === pujaId);
+      if (memIdx !== -1) inMemoryPujas[memIdx] = fullPuja;
+
+      return fullPuja;
     }
-  } catch (err) {
-    console.warn('Saving puja to in-memory fallback:', err);
-    // In-memory update
-    const record: PujaRecord = {
+  } catch (err: any) {
+    console.error('saveAdminPuja error:', err);
+    // If Supabase keys are configured, rethrow real error
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      throw err;
+    }
+
+    // Fallback only if Supabase is completely unconfigured
+    const fallbackRecord: PujaRecord = {
       ...(pujaPayload as PujaRecord),
-      packages: packages.map((pkg, i) => ({
-        id: pkg.id || `pkg-${Date.now()}-${i}`,
-        puja_id: pujaId,
-        name: pkg.name || 'Individual Puja',
-        package_type: pkg.package_type || 'single',
-        max_persons: pkg.max_persons || 1,
-        price: Number(pkg.price) || 851,
-        inclusions: pkg.inclusions || [],
-        display_order: i + 1,
-        is_active: pkg.is_active !== false,
-      })),
+      packages: cleanPackages,
       enrollments_count: 0,
       revenue_collected: 0,
     };
-
     if (isNew) {
-      inMemoryPujas.push(record);
+      inMemoryPujas.unshift(fallbackRecord);
     } else {
       const idx = inMemoryPujas.findIndex((p) => p.id === pujaId);
-      if (idx !== -1) inMemoryPujas[idx] = record;
+      if (idx !== -1) inMemoryPujas[idx] = fallbackRecord;
     }
-
-    return record;
+    return fallbackRecord;
   }
 }
 
 export async function deleteAdminPuja(id: string): Promise<boolean> {
   try {
     const supabase = createAdminClient();
-    await supabase.from('pujas').delete().eq('id', id);
-  } catch (err) {
+    const { error } = await supabase.from('pujas').delete().eq('id', id);
+    if (error) {
+      console.error('Error deleting puja from Supabase:', error);
+      throw new Error(`Failed to delete puja: ${error.message}`);
+    }
+  } catch (err: any) {
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      throw err;
+    }
     console.warn('Deleting from in-memory store:', err);
   }
   inMemoryPujas = inMemoryPujas.filter((p) => p.id !== id);

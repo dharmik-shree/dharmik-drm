@@ -89,16 +89,12 @@ export default function PujaForm({ initialPuja, isEdit = false }: PujaFormProps)
   const [shortDescription, setShortDescription] = useState(initialPuja?.short_description || '');
   const [description, setDescription] = useState(initialPuja?.description || '');
   const [bannerImageUrl, setBannerImageUrl] = useState(
-    initialPuja?.banner_image_url || 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=1200&q=80'
+    initialPuja?.banner_image_url || ''
   );
   const [galleryImages, setGalleryImages] = useState<string[]>(
     initialPuja?.gallery_images && Array.isArray(initialPuja.gallery_images)
       ? initialPuja.gallery_images
-      : [
-          'https://images.unsplash.com/photo-1544816155-12df9643f363?w=800&q=80',
-          'https://images.unsplash.com/photo-1609342122563-a43ac8917a3a?w=800&q=80',
-          'https://images.unsplash.com/photo-1519817650390-64a93db51149?w=800&q=80',
-        ]
+      : []
   );
   const [isUploadingBanner, setIsUploadingBanner] = useState(false);
   const [isUploadingGallery, setIsUploadingGallery] = useState(false);
@@ -246,8 +242,9 @@ export default function PujaForm({ initialPuja, isEdit = false }: PujaFormProps)
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to upload banner image');
-      if (data.url) {
-        setBannerImageUrl(data.url);
+      const url = data.url || data.urls?.[0];
+      if (url) {
+        setBannerImageUrl(url);
       }
     } catch (err: any) {
       setUploadError(err.message || 'Failed to upload banner image');
@@ -264,16 +261,25 @@ export default function PujaForm({ initialPuja, isEdit = false }: PujaFormProps)
     setUploadError('');
 
     try {
-      const fd = new FormData();
-      Array.from(files).forEach((file) => fd.append('files', file));
-      const res = await fetch('/api/admin/pujas/upload', {
-        method: 'POST',
-        body: fd,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to upload gallery photos');
-      if (data.urls && data.urls.length > 0) {
-        setGalleryImages((prev) => [...prev, ...data.urls]);
+      const fileList = Array.from(files);
+      const newUrls: string[] = [];
+
+      for (const file of fileList) {
+        const fd = new FormData();
+        fd.append('file', file);
+        const res = await fetch('/api/admin/pujas/upload', {
+          method: 'POST',
+          body: fd,
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || `Failed to upload ${file.name}`);
+        const url = data.url || data.urls?.[0];
+        if (url) newUrls.push(url);
+      }
+
+      if (newUrls.length > 0) {
+        setGalleryImages((prev) => [...prev, ...newUrls]);
+        setBannerImageUrl((curr) => (curr ? curr : newUrls[0]));
       }
     } catch (err: any) {
       setUploadError(err.message || 'Failed to upload gallery photos');
@@ -403,31 +409,50 @@ export default function PujaForm({ initialPuja, isEdit = false }: PujaFormProps)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+
+    if (!title.trim()) {
+      setErrorMsg('Please enter a Puja Title.');
+      return;
+    }
+
+    if (!locationName.trim()) {
+      setErrorMsg('Please enter a Temple & Sacred Location.');
+      return;
+    }
+
+    if (!bannerImageUrl.trim()) {
+      setErrorMsg('Please upload a Main Featured Banner Image or provide an image URL.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       const payload = {
-        title,
-        slug,
-        subtitle,
-        short_description: shortDescription,
-        description,
-        banner_image_url: bannerImageUrl,
-        gallery_images: galleryImages,
-        location_name: locationName,
-        tithi_details: tithiDetails,
-        starting_price: Number(startingPrice),
-        meeting_link: meetingLink,
+        title: title.trim(),
+        slug: slug.trim(),
+        subtitle: subtitle.trim(),
+        short_description: shortDescription.trim(),
+        description: description.trim(),
+        banner_image_url: bannerImageUrl.trim(),
+        gallery_images: galleryImages.filter((img) => typeof img === 'string' && img.trim() !== ''),
+        location_name: locationName.trim(),
+        tithi_details: tithiDetails.trim(),
+        starting_price: Number(startingPrice) || 0,
+        meeting_link: meetingLink.trim(),
         puja_status: pujaStatus,
         is_featured: isFeatured,
         is_active: isActive,
-        event_date: new Date(eventDate).toISOString(),
-        enrollment_end_date: new Date(enrollmentEndDate).toISOString(),
+        event_date: eventDate ? new Date(eventDate).toISOString() : new Date().toISOString(),
+        enrollment_end_date: enrollmentEndDate
+          ? new Date(enrollmentEndDate).toISOString()
+          : new Date().toISOString(),
         process_steps: processSteps.filter((s) => s.title.trim() !== ''),
         faqs: faqs.filter((f) => f.question.trim() !== ''),
         packages: packages.map((pkg, idx) => ({
           ...pkg,
-          price: Number(pkg.price),
+          name: pkg.name?.trim() || `Package #${idx + 1}`,
+          price: Number(pkg.price) || 0,
           original_price: pkg.original_price ? Number(pkg.original_price) : undefined,
           display_order: idx + 1,
         })),
@@ -705,6 +730,16 @@ export default function PujaForm({ initialPuja, isEdit = false }: PujaFormProps)
                     className="hidden"
                   />
                 </label>
+                {bannerImageUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setBannerImageUrl('')}
+                    className="px-3 py-2 border border-slate-300 hover:bg-slate-50 text-slate-600 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Clear Banner</span>
+                  </button>
+                )}
                 <span className="text-xs text-slate-400">or enter direct URL below:</span>
               </div>
 
