@@ -2,19 +2,19 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 // POST /api/admin/pujas/upload — Upload single or multiple images to Supabase Storage
 export async function POST(request: Request) {
   try {
     const formData = await request.formData();
-    const files = formData.getAll('files') as File[];
-    const singleFile = formData.get('file') as File | null;
-
     const filesToUpload: File[] = [];
-    if (files && files.length > 0) {
-      filesToUpload.push(...files);
-    } else if (singleFile) {
-      filesToUpload.push(singleFile);
+
+    // Collect all valid files from any form key (file, files, etc.)
+    for (const [, value] of formData.entries()) {
+      if (value instanceof File && value.size > 0) {
+        filesToUpload.push(value);
+      }
     }
 
     if (filesToUpload.length === 0) {
@@ -38,12 +38,14 @@ export async function POST(request: Request) {
 
     for (const file of filesToUpload) {
       const rawExt = file.name.split('.').pop() || 'jpg';
-      const cleanExt = rawExt.toLowerCase().replace(/[^a-z0-9]/g, '');
-      const safeName = file.name
+      const cleanExt = rawExt.toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
+      const safeBase = file.name
+        .replace(/\.[^/.]+$/, '')
         .substring(0, 30)
         .toLowerCase()
-        .replace(/[^a-z0-9]/g, '-');
-      const uniqueFileName = `puja-${Date.now()}-${Math.random().toString(36).substring(2, 8)}-${safeName}.${cleanExt}`;
+        .replace(/[^a-z0-9]/g, '-')
+        .replace(/(^-|-$)/g, '');
+      const uniqueFileName = `puja-${Date.now()}-${Math.random().toString(36).substring(2, 8)}-${safeBase || 'photo'}.${cleanExt}`;
 
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);

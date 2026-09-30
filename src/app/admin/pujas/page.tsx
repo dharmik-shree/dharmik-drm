@@ -190,14 +190,19 @@ export default function AdminPujasPage() {
                       {/* Image & Title */}
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="relative w-12 h-12 rounded-lg overflow-hidden shrink-0 border border-slate-200 bg-slate-100">
-                            <Image
-                              src={puja.banner_image_url}
-                              alt={puja.title}
-                              fill
-                              sizes="48px"
-                              className="object-cover"
-                            />
+                          <div className="relative w-12 h-12 rounded-lg overflow-hidden shrink-0 border border-slate-200 bg-slate-100 flex items-center justify-center">
+                            {puja.banner_image_url ? (
+                              <Image
+                                src={puja.banner_image_url}
+                                alt={puja.title}
+                                fill
+                                sizes="48px"
+                                className="object-cover"
+                                unoptimized
+                              />
+                            ) : (
+                              <Flame className="w-5 h-5 text-orange-500" />
+                            )}
                           </div>
                           <div>
                             <div className="font-semibold text-slate-900 max-w-xs truncate">
