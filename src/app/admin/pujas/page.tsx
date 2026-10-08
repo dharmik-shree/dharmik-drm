@@ -276,6 +276,15 @@ export default function AdminPujasPage() {
                       {/* Actions */}
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          <a
+                            href={`http://localhost:3000/puja/${puja.slug}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1.5 rounded hover:bg-slate-100 text-slate-600 hover:text-amber-600 transition-colors"
+                            title="View on Devotee Website"
+                          >
+                            <ExternalLink className="w-4 h-4" />
+                          </a>
                           <Link
                             href={`/admin/pujas/enrollments?puja_id=${puja.id}`}
                             className="p-1.5 rounded hover:bg-slate-100 text-slate-600 hover:text-blue-600 transition-colors"

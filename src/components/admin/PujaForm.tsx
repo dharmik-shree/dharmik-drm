@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Flame,
@@ -16,59 +16,189 @@ import {
   CheckCircle2,
   AlertCircle,
   HelpCircle,
-  ListOrdered,
-  RotateCcw,
-  ChevronUp,
-  ChevronDown,
   Upload,
   Image as ImageIcon,
   Loader2,
   X,
-  Star,
-  ChevronLeft,
+  ExternalLink,
   ChevronRight,
+  Eye,
+  Layers,
+  Clock,
+  Check,
+  RefreshCw,
+  Copy,
 } from 'lucide-react';
-import { PujaRecord, PujaPackageRecord, PujaProcessStepItem, PujaFAQItem } from '@/types';
+import { PujaRecord, PujaPackageRecord, PujaBenefitItem, PujaProcessStepItem, PujaFAQItem } from '@/types';
+
+// Curated Royalty-Free Sacred Temple Presets
+const SACRED_IMAGE_PRESETS = [
+  {
+    label: 'Gaya Vishnu Pad',
+    url: 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=1200&q=80',
+    location: 'Gaya Ji, Bihar',
+  },
+  {
+    label: 'Varanasi Ganga Ghat',
+    url: 'https://images.unsplash.com/photo-1561361513-2d000a50f0dc?w=1200&q=80',
+    location: 'Varanasi, UP',
+  },
+  {
+    label: 'Trimbak Jyotirlinga',
+    url: 'https://images.unsplash.com/photo-1582510003544-4d00b7f74220?w=1200&q=80',
+    location: 'Nashik, Maharashtra',
+  },
+  {
+    label: 'Sacred Vedic Havan',
+    url: 'https://images.unsplash.com/photo-1609342122563-a43ac8917a3a?w=1200&q=80',
+    location: 'Vedic Yajna Shala',
+  },
+  {
+    label: 'Temple Gopuram Darshan',
+    url: 'https://images.unsplash.com/photo-1519817650390-64a93db51149?w=1200&q=80',
+    location: 'Ancient Kshetra',
+  },
+  {
+    label: 'Shiva Lingam Puja',
+    url: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1200&q=80',
+    location: 'Jyotirlinga Kshetra',
+  },
+];
+
+// Pre-built authentic puja templates for 1-click loading
+const PUJA_TEMPLATES = [
+  {
+    id: 'kashi-vishwanath',
+    name: '🕉️ Kashi Vishwanath Mahadev Rudrabhishek',
+    data: {
+      title: 'Maha Rudrabhishek & Ganga Aarti at Kashi Vishwanath',
+      subtitle: 'Invoke divine peace, remove obstacles & invite cosmic prosperity at Varanasi',
+      locationName: 'Kashi Vishwanath Mandir, Varanasi, Uttar Pradesh',
+      tithiDetails: 'Shukla Trayodashi (Som Pradosh Vrat)',
+      startingPrice: 1100,
+      bannerImageUrl: 'https://images.unsplash.com/photo-1561361513-2d000a50f0dc?w=1200&q=80',
+      shortDescription:
+        'Vedic Pandits perform the sacred Laghu Rudra Abhishek and Bilva Archana at the ancient Manikarnika-Vishwanath kshetra for health, vitality, and planetary peace.',
+      description:
+        'Kashi is the eternal city of Lord Shiva. Participating in this Rudrabhishek bestows liberation from malefic planetary afflictions (especially Rahu-Ketu and Saturn Sade Sati). Devotees receive individual Sankalp with Gotra chanting, WhatsApp uncut video proof, and consecrated Gangajal Bhasma Prasad delivered directly home.',
+      meetingLink: 'https://meet.google.com/kashi-rudra-seva',
+    },
+  },
+  {
+    id: 'gaya-pitru',
+    name: '🪔 Gaya Ji Sarva Pitru Shanti & Pind Daan',
+    data: {
+      title: 'Sarva Pitru Shanti Mahapuja at Gaya Ji',
+      subtitle: 'Ancestral peace, Pitru Dosh Nivaran and divine blessings across seven generations',
+      locationName: 'Vishnu Pad Mandir, Gaya Ji, Bihar',
+      tithiDetails: 'Amavasya / Bhadrapada Shukla Purnima',
+      startingPrice: 851,
+      bannerImageUrl: 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=1200&q=80',
+      shortDescription:
+        'Perform sacred Pitru Tarpana & Pind Daan at holy Vishnu Pad in Gaya. Free your lineage from ancestral afflictions and invite generational peace, health & prosperity.',
+      description:
+        'According to traditional Sanatan beliefs, Gaya is the ultimate sacred shrine for Pitru Mukti. Performing this Mahapuja with your Gotra and family names recited by Vedic Pandits brings complete Shanti to departed ancestors. Devotees receive live streaming access, uncut video recording, and consecrated Tirth Prasad delivered directly to their doorstep.',
+      meetingLink: 'https://meet.google.com/dharmik-gaya-puja',
+    },
+  },
+  {
+    id: 'trimbak-mrityunjaya',
+    name: '🔱 Trimbakeshwar Maha Mrityunjaya & Rudrabhishek',
+    data: {
+      title: 'Maha Mrityunjaya & Rudrabhishek at Trimbakeshwar',
+      subtitle: 'Ayushya Vardhan, Health Protection & Relief from Graha Doshas at the Jyotirlinga',
+      locationName: 'Trimbakeshwar Jyotirlinga, Nashik, Maharashtra',
+      tithiDetails: 'Som Pradosh / Trayodashi Muhurat',
+      startingPrice: 1100,
+      bannerImageUrl: 'https://images.unsplash.com/photo-1582510003544-4d00b7f74220?w=1200&q=80',
+      shortDescription:
+        'Experience the divine power of sacred Rudrabhishek chanted with 11 Vedic Pandits at Trimbakeshwar Jyotirlinga. Ward off untimely hurdles, illnesses, and negative energies.',
+      description:
+        'Trimbakeshwar is the revered origin of Godavari and home to the three-faced Jyotirlinga representing Brahma, Vishnu, and Mahesh. The Maha Mrityunjaya recitation bestows divine longevity, mental serenity, and protection against malefic planetary impacts.',
+      meetingLink: 'https://meet.google.com/dharmik-trimbak-puja',
+    },
+  },
+  {
+    id: 'ujjain-kaalsarp',
+    name: '⚡ Ujjain Mahakaleshwar Kaal Sarp & Shanti Havan',
+    data: {
+      title: 'Kaal Sarp & Rahu Shanti Havan at Ujjain Mahakal',
+      subtitle: 'Overcome sudden life setbacks, career roadblocks and financial instability',
+      locationName: 'Mahakaleshwar Kshetra, Ujjain, Madhya Pradesh',
+      tithiDetails: 'Nag Panchami / Amavasya Muhurat',
+      startingPrice: 1251,
+      bannerImageUrl: 'https://images.unsplash.com/photo-1609342122563-a43ac8917a3a?w=1200&q=80',
+      shortDescription:
+        'Vedic Havan and Rahu-Ketu pacification rituals performed on the holy banks of Shipra near Mahakaleshwar Jyotirlinga to break karmic cycles.',
+      description:
+        'Lord Mahakala is the supreme master of time and destiny. Performing this Shanti ritual under authenticated Purohits dispels persistent Kaal Sarp and planetary doshas that impede career growth and family peace.',
+      meetingLink: 'https://meet.google.com/ujjain-mahakal-puja',
+    },
+  },
+];
+
+const DEFAULT_BENEFITS: PujaBenefitItem[] = [
+  {
+    title: 'Personalized Vedic Sankalp',
+    description: 'Qualified Teerth Purohits chant your Gotra, Nakshatra, and Family names during Ahuti.',
+  },
+  {
+    title: 'Graha Shanti & Protection',
+    description: 'Dissolves malefic planetary blocks hindering health, financial growth, and family peace.',
+  },
+  {
+    title: 'Doorstep Consecrated Prasad',
+    description: 'Receive an authentic Aashirwad Box with sacred Tirth Jal and sanctified Temple Prasad.',
+  },
+  {
+    title: 'Full WhatsApp Video Proof',
+    description: 'Live broadcast access link and uncut personalized video of the ritual sent to your phone.',
+  },
+];
 
 const DEFAULT_PROCESS_STEPS: PujaProcessStepItem[] = [
   {
     step: 1,
     title: 'Devotee Sankalp',
-    description: 'Purohit recites your Name, Gotra, and wish before the sacred Falgu river altar.',
+    description: 'Purohit recites your Name, Gotra, and wish before the sacred temple altar.',
   },
   {
     step: 2,
-    title: 'Pind Daan & Til Tarpana',
-    description: 'Authentic Vedic offerings of Barley, Til, Honey, and Milk honoring your lineage.',
+    title: 'Vedic Ahuti & Havan',
+    description: 'Purifying sacred fire ceremony reciting 1008 Vedic Mantras honoring the deity.',
   },
   {
     step: 3,
-    title: 'Maha Havan & Pitru Gayatri',
-    description: 'Purifying sacred fire ceremony reciting 1008 Pitru Gayatri Mantras.',
+    title: 'Live Darshan & Aarti',
+    description: 'Special deep daan and maha aarti broadcast live to all enrolled devotees.',
   },
   {
     step: 4,
     title: 'WhatsApp Video & Prasad Dispatch',
-    description: 'Full HD video recording shared on your WhatsApp and consecrated Prasad dispatched.',
+    description: 'Complete HD video recording shared on WhatsApp and sanctified Prasad dispatched to your address.',
   },
 ];
 
 const DEFAULT_FAQS: PujaFAQItem[] = [
   {
-    question: 'Do I need to be physically present at Gaya?',
-    answer: 'No. The Puja is performed on your behalf by authenticated Purohits using your Gotra and Name. You can watch live or view the complete uncut video recording sent to your WhatsApp.',
+    question: 'Do I need to be physically present at the temple?',
+    answer:
+      'No. The Puja is performed on your behalf by authenticated Purohits using your Gotra and Name. You can watch live or view the complete uncut video recording sent to your WhatsApp.',
   },
   {
     question: 'What if I do not know my Gotra?',
-    answer: 'In Sanatan Dharma traditions, if you do not know your Gotra, Panditji will take the universal Kashyap Gotra Sankalp on your behalf, which is fully valid and auspicious.',
+    answer:
+      'In Sanatan Dharma traditions, if you do not know your Gotra, Panditji will take the universal Kashyap Gotra Sankalp on your behalf, which is fully valid and auspicious.',
   },
   {
     question: 'When and how will I receive the meeting link?',
-    answer: 'On the morning of the Puja day, our team will send the personalized joining link to your registered WhatsApp number and Email.',
+    answer:
+      'On the morning of the Puja day, our team will send the personalized joining link to your registered WhatsApp number and Email.',
   },
   {
     question: 'How will I receive the consecrated Prasad?',
-    answer: 'The consecrated Prasad and Aashirwad Box will be packed in a sacred sanctified container and dispatched via premium courier directly to your home address.',
+    answer:
+      'The consecrated Prasad and Aashirwad Box will be packed in a sacred sanctified container and dispatched via premium courier directly to your home address.',
   },
 ];
 
@@ -79,160 +209,193 @@ interface PujaFormProps {
 
 export default function PujaForm({ initialPuja, isEdit = false }: PujaFormProps) {
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<'basics' | 'packages' | 'vedic'>('basics');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [successResult, setSuccessResult] = useState<{
+    slug: string;
+    title: string;
+  } | null>(null);
 
-  // Puja Basic Fields
-  const [title, setTitle] = useState(initialPuja?.title || '');
-  const [slug, setSlug] = useState(initialPuja?.slug || '');
-  const [subtitle, setSubtitle] = useState(initialPuja?.subtitle || '');
-  const [shortDescription, setShortDescription] = useState(initialPuja?.short_description || '');
-  const [description, setDescription] = useState(initialPuja?.description || '');
-  const [bannerImageUrl, setBannerImageUrl] = useState(
-    initialPuja?.banner_image_url || ''
-  );
-  const [galleryImages, setGalleryImages] = useState<string[]>(
-    initialPuja?.gallery_images && Array.isArray(initialPuja.gallery_images)
-      ? initialPuja.gallery_images
-      : []
-  );
-  const [isUploadingBanner, setIsUploadingBanner] = useState(false);
-  const [isUploadingGallery, setIsUploadingGallery] = useState(false);
-  const [uploadError, setUploadError] = useState('');
-  const [newGalleryUrlInput, setNewGalleryUrlInput] = useState('');
-  const [showAddUrlInput, setShowAddUrlInput] = useState(false);
-  const [locationName, setLocationName] = useState(initialPuja?.location_name || '');
-  const [tithiDetails, setTithiDetails] = useState(initialPuja?.tithi_details || '');
-  const [startingPrice, setStartingPrice] = useState(initialPuja?.starting_price || 851);
-  const [meetingLink, setMeetingLink] = useState(
-    initialPuja?.meeting_link || 'https://meet.google.com/dharmik-live'
-  );
-  const [pujaStatus, setPujaStatus] = useState<string>(initialPuja?.puja_status || 'upcoming');
-  const [isFeatured, setIsFeatured] = useState<boolean>(initialPuja?.is_featured ?? true);
-  const [isActive, setIsActive] = useState<boolean>(initialPuja?.is_active ?? true);
+  // Helper date generators for default future dates (+7 days for event, +6 days for enrollment end)
+  const getDefaultEventDate = () => {
+    const d = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    d.setHours(9, 30, 0, 0);
+    return d.toISOString();
+  };
 
-  // Dates formatted for <input type="datetime-local" />
+  const getDefaultEndDate = () => {
+    const d = new Date(Date.now() + 6 * 24 * 60 * 60 * 1000);
+    d.setHours(23, 59, 0, 0);
+    return d.toISOString();
+  };
+
   const formatForInput = (iso?: string) => {
     if (!iso) return '';
     try {
       const d = new Date(iso);
-      d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-      return d.toISOString().slice(0, 16);
+      const pad = (n: number) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
     } catch {
       return '';
     }
   };
 
-  const defaultEventDate = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString();
-  const defaultEndDate = new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString();
+  // Form State
+  const [title, setTitle] = useState(initialPuja?.title || '');
+  const [slug, setSlug] = useState(initialPuja?.slug || '');
+  const [isSlugManual, setIsSlugManual] = useState(Boolean(initialPuja?.slug));
+  const [subtitle, setSubtitle] = useState(initialPuja?.subtitle || '');
+  const [locationName, setLocationName] = useState(initialPuja?.location_name || '');
+  const [tithiDetails, setTithiDetails] = useState(initialPuja?.tithi_details || '');
+  const [startingPrice, setStartingPrice] = useState<number>(initialPuja?.starting_price || 851);
+  const [shortDescription, setShortDescription] = useState(initialPuja?.short_description || '');
+  const [description, setDescription] = useState(initialPuja?.description || '');
+  const [bannerImageUrl, setBannerImageUrl] = useState(
+    initialPuja?.banner_image_url || SACRED_IMAGE_PRESETS[0].url
+  );
+  const [galleryImages, setGalleryImages] = useState<string[]>(
+    Array.isArray(initialPuja?.gallery_images) ? initialPuja.gallery_images : []
+  );
 
-  const [eventDate, setEventDate] = useState(formatForInput(initialPuja?.event_date || defaultEventDate));
+  const [eventDate, setEventDate] = useState(formatForInput(initialPuja?.event_date || getDefaultEventDate()));
   const [enrollmentEndDate, setEnrollmentEndDate] = useState(
-    formatForInput(initialPuja?.enrollment_end_date || defaultEndDate)
+    formatForInput(initialPuja?.enrollment_end_date || getDefaultEndDate())
+  );
+  const [pujaStatus, setPujaStatus] = useState<string>(initialPuja?.puja_status || 'upcoming');
+  const [isFeatured, setIsFeatured] = useState<boolean>(initialPuja?.is_featured ?? true);
+  const [isActive, setIsActive] = useState<boolean>(initialPuja?.is_active ?? true);
+  const [meetingLink, setMeetingLink] = useState(
+    initialPuja?.meeting_link || 'https://meet.google.com/dharmik-puja-live'
   );
 
-  // Packages Builder
+  // Upload States
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadFeedback, setUploadFeedback] = useState('');
+
+  // Packages State - Pre-loaded with 3 standard packages
+  const defaultInitialPackages: Partial<PujaPackageRecord>[] = [
+    {
+      id: 'pkg-default-1',
+      name: 'Single Devotee Sankalp',
+      package_type: 'single',
+      max_persons: 1,
+      price: startingPrice || 851,
+      original_price: Math.round((startingPrice || 851) * 1.4),
+      badge_text: '',
+      description: 'Personalized Sankalp for 1 person with Gotra recitation & WhatsApp HD video proof.',
+      inclusions: ['1 Person Name & Gotra recited', 'Vedic Sankalp & Ahuti', 'WhatsApp uncut video recording', 'Live stream access link'],
+      display_order: 1,
+      is_active: true,
+    },
+    {
+      id: 'pkg-default-2',
+      name: 'Couple / Dampati Sankalp',
+      package_type: 'couple',
+      max_persons: 2,
+      price: Math.round((startingPrice || 851) * 1.5),
+      original_price: Math.round((startingPrice || 851) * 2),
+      badge_text: 'Popular',
+      description: 'Joint Sankalp for Husband & Wife to invite marital peace and family harmony.',
+      inclusions: ['2 Persons Names & Gotra recited', 'Joint Dampati Vedic Sankalp', 'Doorstep Tirth Prasad Delivery', 'Full WhatsApp HD video proof'],
+      display_order: 2,
+      is_active: true,
+    },
+    {
+      id: 'pkg-default-3',
+      name: 'Family Sampoorna Seva + Prasad',
+      package_type: 'group',
+      max_persons: 6,
+      price: Math.round((startingPrice || 851) * 2.3),
+      original_price: Math.round((startingPrice || 851) * 3.2),
+      badge_text: 'Best Value',
+      description: 'Complete family ritual with consecrated Prasad and Aashirwad Box sent to your home.',
+      inclusions: ['Up to 6 Family Members recited', 'Full Maha Havan & Tarpana', 'Consecrated Aashirwad Prasad Box by courier', 'Full video proof & photo album'],
+      display_order: 3,
+      is_active: true,
+    },
+  ];
+
   const [packages, setPackages] = useState<Partial<PujaPackageRecord>[]>(
-    initialPuja?.packages && initialPuja.packages.length > 0
-      ? initialPuja.packages
-      : [
-          {
-            id: 'pkg-1',
-            name: 'Individual Puja',
-            package_type: 'single',
-            max_persons: 1,
-            price: 851,
-            original_price: 1250,
-            inclusions: ['1 Person Gotra & Name recited', 'Pitru/Vedic Ahuti', 'WhatsApp Video Proof'],
-            display_order: 1,
-            is_active: true,
-          },
-          {
-            id: 'pkg-2',
-            name: 'Partner / Couple Puja',
-            package_type: 'couple',
-            max_persons: 2,
-            price: 1251,
-            original_price: 1850,
-            badge_text: 'Popular',
-            inclusions: ['2 Persons Names & Gotra', 'Joint Sankalp', 'Doorstep Prasad Delivery'],
-            display_order: 2,
-            is_active: true,
-          },
-          {
-            id: 'pkg-3',
-            name: 'Family Puja + Gau Seva',
-            package_type: 'group',
-            max_persons: 6,
-            price: 2001,
-            original_price: 2900,
-            badge_text: 'Best Value',
-            inclusions: ['Up to 6 Family Members', 'Complete Havan', 'Gau Seva & Anna Daan'],
-            display_order: 3,
-            is_active: true,
-          },
-        ]
+    initialPuja?.packages && initialPuja.packages.length > 0 ? initialPuja.packages : defaultInitialPackages
   );
 
-  // Vedic Process Steps Builder
+  // Benefits, Process Steps & FAQs
+  const [benefits, setBenefits] = useState<PujaBenefitItem[]>(
+    initialPuja?.benefits && initialPuja.benefits.length > 0 ? initialPuja.benefits : DEFAULT_BENEFITS
+  );
   const [processSteps, setProcessSteps] = useState<PujaProcessStepItem[]>(
     initialPuja?.process_steps && initialPuja.process_steps.length > 0
       ? initialPuja.process_steps
       : DEFAULT_PROCESS_STEPS
   );
-
-  // FAQs Builder (Sensible fixed defaults loaded, fully customizable per puja)
   const [faqs, setFaqs] = useState<PujaFAQItem[]>(
-    initialPuja?.faqs && initialPuja.faqs.length > 0
-      ? initialPuja.faqs
-      : DEFAULT_FAQS
+    initialPuja?.faqs && initialPuja.faqs.length > 0 ? initialPuja.faqs : DEFAULT_FAQS
   );
 
+  // Title change with auto-slug
   const handleTitleChange = (val: string) => {
     setTitle(val);
-    if (!isEdit && !slug) {
+    if (!isSlugManual) {
+      const generated = val
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+      setSlug(generated);
+    }
+  };
+
+  // Date helper buttons
+  const applyDatePreset = (daysAhead: number) => {
+    const ev = new Date(Date.now() + daysAhead * 24 * 60 * 60 * 1000);
+    ev.setHours(9, 30, 0, 0);
+    const end = new Date(ev.getTime() - 24 * 60 * 60 * 1000);
+    end.setHours(23, 59, 0, 0);
+    setEventDate(formatForInput(ev.toISOString()));
+    setEnrollmentEndDate(formatForInput(end.toISOString()));
+  };
+
+  // Template loader
+  const handleSelectTemplate = (templateId: string) => {
+    const tmpl = PUJA_TEMPLATES.find((t) => t.id === templateId);
+    if (!tmpl) return;
+
+    setTitle(tmpl.data.title);
+    if (!isEdit) {
       setSlug(
-        val
+        tmpl.data.title
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, '-')
           .replace(/(^-|-$)/g, '')
       );
     }
+    setSubtitle(tmpl.data.subtitle);
+    setLocationName(tmpl.data.locationName);
+    setTithiDetails(tmpl.data.tithiDetails);
+    setStartingPrice(tmpl.data.startingPrice);
+    setBannerImageUrl(tmpl.data.bannerImageUrl);
+    setShortDescription(tmpl.data.shortDescription);
+    setDescription(tmpl.data.description);
+    setMeetingLink(tmpl.data.meetingLink);
+
+    // Update package prices to match template starting price
+    setPackages((prev) =>
+      prev.map((pkg, idx) => {
+        if (idx === 0) return { ...pkg, price: tmpl.data.startingPrice };
+        if (idx === 1) return { ...pkg, price: Math.round(tmpl.data.startingPrice * 1.5) };
+        if (idx === 2) return { ...pkg, price: Math.round(tmpl.data.startingPrice * 2.3) };
+        return pkg;
+      })
+    );
   };
 
-  const handleAddPackage = () => {
-    setPackages([
-      ...packages,
-      {
-        id: `pkg-${Date.now()}`,
-        name: 'New Custom Package',
-        package_type: 'single',
-        max_persons: 1,
-        price: 999,
-        inclusions: ['Gotra Recitation', 'WhatsApp Video Recording'],
-        display_order: packages.length + 1,
-        is_active: true,
-      },
-    ]);
-  };
-
-  const handleRemovePackage = (index: number) => {
-    setPackages(packages.filter((_, i) => i !== index));
-  };
-
-  const handlePackageChange = (index: number, field: string, value: any) => {
-    const updated = [...packages];
-    updated[index] = { ...updated[index], [field]: value };
-    setPackages(updated);
-  };
-
-  // Image Upload Handlers
-  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Device upload
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setIsUploadingBanner(true);
-    setUploadError('');
 
+    setIsUploading(true);
+    setUploadFeedback('');
     try {
       const fd = new FormData();
       fd.append('file', file);
@@ -241,221 +404,84 @@ export default function PujaForm({ initialPuja, isEdit = false }: PujaFormProps)
         body: fd,
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to upload banner image');
-      const url = data.url || data.urls?.[0];
-      if (url) {
-        setBannerImageUrl(url);
+      if (!res.ok) throw new Error(data.error || 'Failed to upload photo');
+      if (data.url) {
+        setBannerImageUrl(data.url);
+        setUploadFeedback('Banner image uploaded successfully!');
       }
     } catch (err: any) {
-      setUploadError(err.message || 'Failed to upload banner image');
+      setUploadFeedback(`Upload error: ${err.message}`);
     } finally {
-      setIsUploadingBanner(false);
+      setIsUploading(false);
       e.target.value = '';
     }
   };
 
-  const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-    setIsUploadingGallery(true);
-    setUploadError('');
-
-    try {
-      const fileList = Array.from(files);
-      const newUrls: string[] = [];
-
-      for (const file of fileList) {
-        const fd = new FormData();
-        fd.append('file', file);
-        const res = await fetch('/api/admin/pujas/upload', {
-          method: 'POST',
-          body: fd,
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || `Failed to upload ${file.name}`);
-        const url = data.url || data.urls?.[0];
-        if (url) newUrls.push(url);
-      }
-
-      if (newUrls.length > 0) {
-        setGalleryImages((prev) => [...prev, ...newUrls]);
-        setBannerImageUrl((curr) => (curr ? curr : newUrls[0]));
-      }
-    } catch (err: any) {
-      setUploadError(err.message || 'Failed to upload gallery photos');
-    } finally {
-      setIsUploadingGallery(false);
-      e.target.value = '';
-    }
-  };
-
-  const handleAddGalleryUrl = () => {
-    if (!newGalleryUrlInput.trim()) return;
-    setGalleryImages((prev) => [...prev, newGalleryUrlInput.trim()]);
-    setNewGalleryUrlInput('');
-    setShowAddUrlInput(false);
-  };
-
-  const handleRemoveGalleryImage = (index: number) => {
-    setGalleryImages((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const handleSetAsBanner = (index: number) => {
-    const selected = galleryImages[index];
-    const oldBanner = bannerImageUrl;
-    setBannerImageUrl(selected);
-    const updated = [...galleryImages];
-    if (oldBanner && !updated.includes(oldBanner)) {
-      updated[index] = oldBanner;
-    } else {
-      updated.splice(index, 1);
-    }
-    setGalleryImages(updated);
-  };
-
-  const handleMoveGalleryImage = (index: number, direction: 'left' | 'right') => {
-    if (direction === 'left' && index === 0) return;
-    if (direction === 'right' && index === galleryImages.length - 1) return;
-    const targetIdx = direction === 'left' ? index - 1 : index + 1;
-    const updated = [...galleryImages];
-    const temp = updated[index];
-    updated[index] = updated[targetIdx];
-    updated[targetIdx] = temp;
-    setGalleryImages(updated);
-  };
-
-  // Process Steps Handlers
-  const handleAddProcessStep = () => {
-    setProcessSteps([
-      ...processSteps,
-      {
-        step: processSteps.length + 1,
-        title: '',
-        description: '',
-      },
-    ]);
-  };
-
-  const handleRemoveProcessStep = (index: number) => {
-    const updated = processSteps.filter((_, i) => i !== index);
-    setProcessSteps(updated.map((s, idx) => ({ ...s, step: idx + 1 })));
-  };
-
-  const handleProcessStepChange = (index: number, field: 'title' | 'description', value: string) => {
-    const updated = [...processSteps];
-    updated[index] = { ...updated[index], [field]: value };
-    setProcessSteps(updated);
-  };
-
-  const handleMoveProcessStep = (index: number, direction: 'up' | 'down') => {
-    if (direction === 'up' && index === 0) return;
-    if (direction === 'down' && index === processSteps.length - 1) return;
-
-    const targetIdx = direction === 'up' ? index - 1 : index + 1;
-    const updated = [...processSteps];
-    const temp = updated[index];
-    updated[index] = updated[targetIdx];
-    updated[targetIdx] = temp;
-
-    setProcessSteps(updated.map((s, idx) => ({ ...s, step: idx + 1 })));
-  };
-
-  const handleResetProcessSteps = () => {
-    if (confirm('Reset Vedic process steps to the standard 4-step template?')) {
-      setProcessSteps(DEFAULT_PROCESS_STEPS);
-    }
-  };
-
-  // FAQ Handlers
-  const handleAddFaq = () => {
-    setFaqs([
-      ...faqs,
-      {
-        question: '',
-        answer: '',
-      },
-    ]);
-  };
-
-  const handleRemoveFaq = (index: number) => {
-    setFaqs(faqs.filter((_, i) => i !== index));
-  };
-
-  const handleFaqChange = (index: number, field: 'question' | 'answer', value: string) => {
-    const updated = [...faqs];
-    updated[index] = { ...updated[index], [field]: value };
-    setFaqs(updated);
-  };
-
-  const handleMoveFaq = (index: number, direction: 'up' | 'down') => {
-    if (direction === 'up' && index === 0) return;
-    if (direction === 'down' && index === faqs.length - 1) return;
-
-    const targetIdx = direction === 'up' ? index - 1 : index + 1;
-    const updated = [...faqs];
-    const temp = updated[index];
-    updated[index] = updated[targetIdx];
-    updated[targetIdx] = temp;
-
-    setFaqs(updated);
-  };
-
-  const handleResetFaqs = () => {
-    if (confirm('Reset FAQs to standard fixed defaults?')) {
-      setFaqs(DEFAULT_FAQS);
-    }
-  };
-
+  // Submit Handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
 
     if (!title.trim()) {
       setErrorMsg('Please enter a Puja Title.');
+      setActiveTab('basics');
       return;
     }
 
     if (!locationName.trim()) {
-      setErrorMsg('Please enter a Temple & Sacred Location.');
+      setErrorMsg('Please specify the Temple & Sacred Location.');
+      setActiveTab('basics');
       return;
     }
 
     if (!bannerImageUrl.trim()) {
-      setErrorMsg('Please upload a Main Featured Banner Image or provide an image URL.');
+      setErrorMsg('Please select or upload a Featured Banner Image.');
+      setActiveTab('basics');
       return;
     }
+
+    const finalSlug = (slug.trim() || title.trim())
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
 
     setIsSubmitting(true);
 
     try {
+      // Ensure at least 1 active package
+      const activePackages = packages.filter((p) => p.is_active !== false);
+      const finalPackages =
+        activePackages.length > 0
+          ? activePackages.map((pkg, idx) => ({
+              ...pkg,
+              name: pkg.name?.trim() || `Package #${idx + 1}`,
+              price: Math.max(1, Number(pkg.price) || startingPrice || 851),
+              original_price: pkg.original_price ? Number(pkg.original_price) : undefined,
+              display_order: idx + 1,
+            }))
+          : defaultInitialPackages;
+
       const payload = {
         title: title.trim(),
-        slug: slug.trim(),
+        slug: finalSlug,
         subtitle: subtitle.trim(),
-        short_description: shortDescription.trim(),
-        description: description.trim(),
+        short_description: shortDescription.trim() || description.slice(0, 150),
+        description: description.trim() || shortDescription.trim(),
         banner_image_url: bannerImageUrl.trim(),
-        gallery_images: galleryImages.filter((img) => typeof img === 'string' && img.trim() !== ''),
+        gallery_images: galleryImages.filter((img) => Boolean(img?.trim())),
         location_name: locationName.trim(),
         tithi_details: tithiDetails.trim(),
-        starting_price: Number(startingPrice) || 0,
+        starting_price: Number(startingPrice) || 851,
         meeting_link: meetingLink.trim(),
         puja_status: pujaStatus,
         is_featured: isFeatured,
         is_active: isActive,
-        event_date: eventDate ? new Date(eventDate).toISOString() : new Date().toISOString(),
-        enrollment_end_date: enrollmentEndDate
-          ? new Date(enrollmentEndDate).toISOString()
-          : new Date().toISOString(),
-        process_steps: processSteps.filter((s) => s.title.trim() !== ''),
-        faqs: faqs.filter((f) => f.question.trim() !== ''),
-        packages: packages.map((pkg, idx) => ({
-          ...pkg,
-          name: pkg.name?.trim() || `Package #${idx + 1}`,
-          price: Number(pkg.price) || 0,
-          original_price: pkg.original_price ? Number(pkg.original_price) : undefined,
-          display_order: idx + 1,
-        })),
+        event_date: eventDate ? new Date(eventDate).toISOString() : getDefaultEventDate(),
+        enrollment_end_date: enrollmentEndDate ? new Date(enrollmentEndDate).toISOString() : getDefaultEndDate(),
+        benefits: benefits.filter((b) => Boolean(b.title.trim())),
+        process_steps: processSteps.filter((s) => Boolean(s.title.trim())),
+        faqs: faqs.filter((f) => Boolean(f.question.trim())),
+        packages: finalPackages,
       };
 
       const url = isEdit ? `/api/admin/pujas/${initialPuja?.id}` : '/api/admin/pujas';
@@ -468,54 +494,132 @@ export default function PujaForm({ initialPuja, isEdit = false }: PujaFormProps)
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to save puja');
+      if (!res.ok) throw new Error(data.error || 'Failed to save puja event');
 
-      router.push('/admin/pujas');
-      router.refresh();
+      setSuccessResult({
+        slug: data.puja?.slug || finalSlug,
+        title: data.puja?.title || title,
+      });
     } catch (err: any) {
+      console.error('Save puja error:', err);
       setErrorMsg(err.message || 'Something went wrong saving the puja.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const formattedPreviewDate = useMemo(() => {
+    try {
+      return new Date(eventDate).toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      });
+    } catch {
+      return 'Upcoming Date';
+    }
+  }, [eventDate]);
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-8 max-w-5xl mx-auto pb-16">
-      {/* Top Header */}
-      <div className="flex items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-xs">
+    <div className="max-w-6xl mx-auto space-y-6 pb-24">
+      {/* SUCCESS MODAL OVERLAY */}
+      {successResult && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 sm:p-8 space-y-6 shadow-2xl border border-emerald-100 text-center">
+            <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto shadow-inner">
+              <CheckCircle2 className="w-9 h-9" />
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="font-serif-heading text-2xl font-bold text-slate-900">
+                {isEdit ? 'Puja Updated Successfully!' : 'Puja Published Successfully!'}
+              </h3>
+              <p className="text-sm text-slate-600">
+                <strong className="text-slate-900">{successResult.title}</strong> is now live on the devotee website.
+              </p>
+            </div>
+
+            <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs font-mono text-slate-600 truncate">
+              Live Path: /puja/{successResult.slug}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+              <a
+                href={`http://localhost:3000/puja/${successResult.slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3 px-4 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-sm"
+              >
+                <span>View Live on Website</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+
+              <button
+                type="button"
+                onClick={() => {
+                  router.push('/admin/pujas');
+                  router.refresh();
+                }}
+                className="w-full py-3 px-4 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-semibold transition-colors"
+              >
+                Back to Pujas List
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TOP HEADER & ACTION BAR */}
+      <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 sticky top-4 z-20">
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={() => router.back()}
-            className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 transition-colors"
+            onClick={() => router.push('/admin/pujas')}
+            className="p-2 rounded-xl hover:bg-slate-100 text-slate-600 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-xl font-bold font-serif-heading text-slate-900">
-              {isEdit ? 'Edit Puja Event' : 'Create New Puja Event'}
-            </h1>
-            <p className="text-xs text-slate-500">
-              Set event dates, live meeting stream link, pricing, and package options.
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg sm:text-xl font-bold font-serif-heading text-slate-900">
+                {isEdit ? 'Edit Puja Event' : 'Create New Puja'}
+              </h1>
+              <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                Fast & Frictionless
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Fill essentials or pick a 1-click template. Changes sync directly to the devotee portal.
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           <button
             type="button"
             onClick={() => router.push('/admin/pujas')}
-            className="px-4 py-2 border border-slate-300 text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-50"
+            className="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-semibold rounded-xl transition-colors"
           >
             Cancel
           </button>
+
           <button
-            type="submit"
+            type="button"
+            onClick={handleSubmit}
             disabled={isSubmitting}
-            className="px-5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold rounded-lg shadow-xs flex items-center gap-1.5 disabled:opacity-50"
+            className="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold rounded-xl shadow-xs flex items-center gap-2 disabled:opacity-50 transition-all cursor-pointer"
           >
-            <Save className="w-4 h-4" />
-            <span>{isSubmitting ? 'Saving...' : 'Save & Publish'}</span>
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Publishing to Portal...</span>
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4" />
+                <span>{isEdit ? 'Update Puja' : 'Publish Puja'}</span>
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -523,914 +627,769 @@ export default function PujaForm({ initialPuja, isEdit = false }: PujaFormProps)
       {errorMsg && (
         <div className="p-4 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center gap-2">
           <AlertCircle className="w-4 h-4 shrink-0" />
-          <span>{errorMsg}</span>
+          <span className="font-medium">{errorMsg}</span>
         </div>
       )}
 
-      {/* SECTION 1: Core Puja Details */}
-      <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-xs space-y-5">
-        <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-          <Flame className="w-4 h-4 text-orange-600" />
-          <span>Basic Puja Information</span>
-        </h2>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
-          {/* Title */}
-          <div className="sm:col-span-2">
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Puja Title *
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => handleTitleChange(e.target.value)}
-              placeholder="e.g. Sarva Pitru Shanti Mahapuja at Gaya Ji"
-              required
-              className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-blue-600"
-            />
-          </div>
-
-          {/* Slug */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              URL Slug (Unique Path) *
-            </label>
-            <input
-              type="text"
-              value={slug}
-              onChange={(e) => setSlug(e.target.value)}
-              placeholder="sarva-pitru-shanti-puja-gaya"
-              required
-              className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-blue-600"
-            />
-            <p className="text-[11px] text-slate-400 mt-1">Live URL: /puja/{slug || 'slug'}</p>
-          </div>
-
-          {/* Starting Price */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Starting Dakshina (₹) *
-            </label>
-            <input
-              type="number"
-              value={startingPrice}
-              onChange={(e) => setStartingPrice(Number(e.target.value))}
-              placeholder="851"
-              required
-              className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-blue-600"
-            />
-          </div>
-
-          {/* Subtitle */}
-          <div className="sm:col-span-2">
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Subtitle / Tagline
-            </label>
-            <input
-              type="text"
-              value={subtitle}
-              onChange={(e) => setSubtitle(e.target.value)}
-              placeholder="Ancestral peace and divine blessings across seven generations"
-              className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-blue-600"
-            />
-          </div>
-
-          {/* Temple & Location */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Temple & Sacred Location *
-            </label>
-            <input
-              type="text"
-              value={locationName}
-              onChange={(e) => setLocationName(e.target.value)}
-              placeholder="Vishnu Pad Mandir, Gaya Ji, Bihar"
-              required
-              className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-blue-600"
-            />
-          </div>
-
-          {/* Tithi / Muhurat Details */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Tithi / Muhurat Badge
-            </label>
-            <input
-              type="text"
-              value={tithiDetails}
-              onChange={(e) => setTithiDetails(e.target.value)}
-              placeholder="Bhadrapada Shukla Purnima (Pitru Paksha)"
-              className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-blue-600"
-            />
-          </div>
-
-          {/* Short Description */}
-          <div className="sm:col-span-2">
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Short Summary (Shows in cards)
-            </label>
-            <textarea
-              value={shortDescription}
-              onChange={(e) => setShortDescription(e.target.value)}
-              rows={2}
-              placeholder="Brief 1-2 sentence overview of the ritual..."
-              className="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-blue-600"
-            />
-          </div>
-
-          {/* Full Description */}
-          <div className="sm:col-span-2">
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Complete Spiritual Description & Significance
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={4}
-              placeholder="Detailed spiritual background, Vedic mantras, and benefits of participating..."
-              className="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-blue-600"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* SECTION 2: Media, Main Banner & Photo Gallery */}
-      <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-xs space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
-          <div>
-            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <ImageIcon className="w-4 h-4 text-purple-600" />
-              <span>Puja Media: Main Banner & Photo Gallery</span>
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Upload real temple, pandit, and havan photos. The banner is featured on the hero visual, and gallery photos show as clickable thumbnails (Thumbnails 1, 2, 3...) on the devotee website.
-            </p>
-          </div>
-        </div>
-
-        {uploadError && (
-          <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{uploadError}</span>
-          </div>
-        )}
-
-        {/* 1. Main Banner Image */}
-        <div className="space-y-3">
+      {/* 1-CLICK TEMPLATE PICKER (Hidden in Edit mode) */}
+      {!isEdit && (
+        <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/5 p-4 sm:p-5 rounded-2xl border border-amber-200/60 shadow-xs space-y-3">
           <div className="flex items-center justify-between">
-            <label className="block text-xs font-bold text-slate-800">
-              1. Main Featured Banner Image *
-            </label>
-            <span className="text-[11px] text-slate-400">
-              Required for website hero banner slider & main card
-            </span>
+            <div className="flex items-center gap-2 text-amber-900 font-semibold text-xs sm:text-sm">
+              <Sparkles className="w-4 h-4 text-amber-600 animate-pulse" />
+              <span>1-Click Sacred Puja Templates (Instant Pre-fill):</span>
+            </div>
+            <span className="text-[11px] text-amber-700 font-medium">Click any to auto-fill everything</span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
-            {/* Live Banner Preview */}
-            <div className="md:col-span-5 relative aspect-[16/9] w-full rounded-xl overflow-hidden border border-slate-200 bg-slate-100 shadow-xs group">
-              {bannerImageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={bannerImageUrl}
-                  alt="Banner Preview"
-                  className="w-full h-full object-cover object-center"
-                />
-              ) : (
-                <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 text-xs gap-1">
-                  <ImageIcon className="w-8 h-8 opacity-40" />
-                  <span>No banner selected</span>
-                </div>
-              )}
-              <div className="absolute top-2 left-2 bg-slate-900/80 backdrop-blur-md text-white text-[10px] font-semibold px-2 py-0.5 rounded">
-                Main Banner
-              </div>
-            </div>
-
-            {/* Controls */}
-            <div className="md:col-span-7 space-y-3 text-left">
-              <div className="flex flex-wrap items-center gap-2">
-                <label className="cursor-pointer px-4 py-2 bg-purple-700 hover:bg-purple-800 text-white text-xs font-semibold rounded-lg flex items-center gap-2 shadow-xs transition-colors">
-                  {isUploadingBanner ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Uploading to Cloud...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-4 h-4" />
-                      <span>Upload Banner Image</span>
-                    </>
-                  )}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    disabled={isUploadingBanner}
-                    onChange={handleBannerUpload}
-                    className="hidden"
-                  />
-                </label>
-                {bannerImageUrl && (
-                  <button
-                    type="button"
-                    onClick={() => setBannerImageUrl('')}
-                    className="px-3 py-2 border border-slate-300 hover:bg-slate-50 text-slate-600 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors"
-                  >
-                    <X className="w-3.5 h-3.5 text-slate-400" />
-                    <span>Clear Banner</span>
-                  </button>
-                )}
-                <span className="text-xs text-slate-400">or enter direct URL below:</span>
-              </div>
-
-              <div>
-                <input
-                  type="url"
-                  value={bannerImageUrl}
-                  onChange={(e) => setBannerImageUrl(e.target.value)}
-                  placeholder="https://images.unsplash.com/... or Supabase storage URL"
-                  required
-                  className="w-full px-3.5 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:outline-none focus:border-blue-600 font-mono"
-                />
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Stored directly in Supabase cloud storage bucket: <span className="font-semibold text-slate-600">pujas</span>.
-                </p>
-              </div>
-            </div>
+          <div className="flex flex-wrap gap-2">
+            {PUJA_TEMPLATES.map((tmpl) => (
+              <button
+                key={tmpl.id}
+                type="button"
+                onClick={() => handleSelectTemplate(tmpl.id)}
+                className="px-3 py-1.5 bg-white hover:bg-amber-100/60 text-slate-800 border border-amber-300/80 rounded-xl text-xs font-medium transition-all shadow-xs hover:border-amber-500 hover:scale-[1.02] flex items-center gap-1.5"
+              >
+                <span>{tmpl.name}</span>
+              </button>
+            ))}
           </div>
         </div>
+      )}
 
-        {/* 2. Photo Gallery & Devotee Thumbnails */}
-        <div className="space-y-3 pt-3 border-t border-slate-100">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div>
-              <label className="block text-xs font-bold text-slate-800">
-                2. Puja Photo Gallery & Devotee Thumbnails ({galleryImages.length} photos)
-              </label>
-              <p className="text-[11px] text-slate-500">
-                These photos appear directly under the main banner as clickable thumbnails (Thumbnail 1, 2, 3...) on the Puja detail page.
-              </p>
-            </div>
+      {/* WORKFLOW TABS */}
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+        <button
+          type="button"
+          onClick={() => setActiveTab('basics')}
+          className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-colors ${
+            activeTab === 'basics'
+              ? 'bg-slate-900 text-white shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          }`}
+        >
+          <Flame className="w-4 h-4 text-amber-400" />
+          <span>1. Essential Details & Photo</span>
+        </button>
 
-            <div className="flex items-center gap-2">
-              <label className="cursor-pointer px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-lg flex items-center gap-1.5 shadow-xs transition-colors">
-                {isUploadingGallery ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span>Uploading...</span>
-                  </>
-                ) : (
-                  <>
-                    <Upload className="w-3.5 h-3.5" />
-                    <span>Upload Gallery Photos</span>
-                  </>
-                )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  disabled={isUploadingGallery}
-                  onChange={handleGalleryUpload}
-                  className="hidden"
-                />
-              </label>
+        <button
+          type="button"
+          onClick={() => setActiveTab('packages')}
+          className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-colors ${
+            activeTab === 'packages'
+              ? 'bg-slate-900 text-white shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          }`}
+        >
+          <Layers className="w-4 h-4 text-blue-400" />
+          <span>2. Packages & Pricing ({packages.filter((p) => p.is_active !== false).length})</span>
+        </button>
 
-              <button
-                type="button"
-                onClick={() => setShowAddUrlInput(!showAddUrlInput)}
-                className="px-2.5 py-1.5 border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-medium rounded-lg flex items-center gap-1"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Add URL</span>
-              </button>
-            </div>
-          </div>
-
-          {showAddUrlInput && (
-            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 flex items-center gap-2">
-              <input
-                type="url"
-                value={newGalleryUrlInput}
-                onChange={(e) => setNewGalleryUrlInput(e.target.value)}
-                placeholder="Paste image URL (https://...)"
-                className="flex-1 px-3 py-1.5 text-xs rounded border border-slate-300 bg-white"
-              />
-              <button
-                type="button"
-                onClick={handleAddGalleryUrl}
-                className="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700"
-              >
-                Add
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setNewGalleryUrlInput('');
-                  setShowAddUrlInput(false);
-                }}
-                className="px-2 py-1.5 text-slate-400 hover:text-slate-600 text-xs"
-              >
-                Cancel
-              </button>
-            </div>
-          )}
-
-          {/* Gallery Thumbnails Grid */}
-          {galleryImages.length === 0 ? (
-            <div className="p-6 border-2 border-dashed border-slate-200 rounded-xl text-center space-y-2 bg-slate-50/50">
-              <ImageIcon className="w-8 h-8 mx-auto text-slate-400" />
-              <p className="text-xs text-slate-600 font-medium">No gallery photos added yet</p>
-              <p className="text-[11px] text-slate-400 max-w-sm mx-auto">
-                Upload 2-4 sacred photos (altar, Vedic pandits, sacred fire, prasad preparation) to show as devotee thumbnails.
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3 pt-1">
-              {galleryImages.map((imgUrl, idx) => (
-                <div
-                  key={idx}
-                  className="group relative rounded-lg overflow-hidden border border-slate-200 bg-white shadow-xs aspect-square flex flex-col justify-between"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={imgUrl}
-                    alt={`Gallery ${idx + 1}`}
-                    className="w-full h-full object-cover object-center"
-                  />
-
-                  {/* Thumbnail Number Badge */}
-                  <div className="absolute top-1.5 left-1.5 bg-slate-900/80 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-                    #{idx + 1}
-                  </div>
-
-                  {/* Action Bar on Hover */}
-                  <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-between p-1.5">
-                    <div className="flex justify-between items-center">
-                      <button
-                        type="button"
-                        onClick={() => handleSetAsBanner(idx)}
-                        className="p-1 bg-amber-500 hover:bg-amber-600 text-white rounded text-[10px] flex items-center gap-0.5"
-                        title="Set as Main Banner"
-                      >
-                        <Star className="w-3 h-3 fill-white" />
-                        <span className="text-[9px]">Banner</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveGalleryImage(idx)}
-                        className="p-1 bg-red-600 hover:bg-red-700 text-white rounded"
-                        title="Remove photo"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      <button
-                        type="button"
-                        disabled={idx === 0}
-                        onClick={() => handleMoveGalleryImage(idx, 'left')}
-                        className="p-1 bg-white/80 hover:bg-white text-slate-800 rounded disabled:opacity-30 text-[10px]"
-                        title="Move Left"
-                      >
-                        <ChevronLeft className="w-3.5 h-3.5" />
-                      </button>
-
-                      <button
-                        type="button"
-                        disabled={idx === galleryImages.length - 1}
-                        onClick={() => handleMoveGalleryImage(idx, 'right')}
-                        className="p-1 bg-white/80 hover:bg-white text-slate-800 rounded disabled:opacity-30 text-[10px]"
-                        title="Move Right"
-                      >
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <button
+          type="button"
+          onClick={() => setActiveTab('vedic')}
+          className={`px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 transition-colors ${
+            activeTab === 'vedic'
+              ? 'bg-slate-900 text-white shadow-xs'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+          }`}
+        >
+          <Sparkles className="w-4 h-4 text-emerald-400" />
+          <span>3. Ritual Info, Steps & Live Link</span>
+        </button>
       </div>
 
-      {/* SECTION 3: Dates, Status & Live Meeting Stream */}
-      <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-xs space-y-5">
-        <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-          <Calendar className="w-4 h-4 text-blue-600" />
-          <span>Timing, Live Stream Link & Visibility</span>
-        </h2>
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* MAIN FORM CONTAINER (7 COLS ON DESKTOP) */}
+        <div className="lg:col-span-8 space-y-6">
+          {/* TAB 1: ESSENTIAL DETAILS */}
+          {activeTab === 'basics' && (
+            <div className="space-y-6">
+              {/* Card 1: Title & Location */}
+              <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+                <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
+                  <Flame className="w-4 h-4 text-orange-600" />
+                  <span>Puja Title & Sacred Temple Location</span>
+                </h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
-          {/* Event Date & Time */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Puja Event Date & Time *
-            </label>
-            <input
-              type="datetime-local"
-              value={eventDate}
-              onChange={(e) => setEventDate(e.target.value)}
-              required
-              className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-blue-600"
-            />
-          </div>
-
-          {/* Enrollment End Date */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Enrollment Deadline (Countdown Timer Ends) *
-            </label>
-            <input
-              type="datetime-local"
-              value={enrollmentEndDate}
-              onChange={(e) => setEnrollmentEndDate(e.target.value)}
-              required
-              className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-blue-600"
-            />
-          </div>
-
-          {/* Live Meeting Stream Link */}
-          <div className="sm:col-span-2">
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Live Meeting / Stream Link (Sent to Devotees on Puja Day)
-            </label>
-            <div className="flex rounded-lg border border-slate-300 overflow-hidden focus-within:border-blue-600">
-              <span className="bg-slate-100 px-3 py-2.5 text-xs text-slate-600 flex items-center gap-1 border-r border-slate-300">
-                <Video className="w-3.5 h-3.5 text-purple-600" /> Meet / Zoom:
-              </span>
-              <input
-                type="url"
-                value={meetingLink}
-                onChange={(e) => setMeetingLink(e.target.value)}
-                placeholder="https://meet.google.com/xyz-abc or YouTube Live link"
-                className="w-full px-3 py-2 text-sm focus:outline-none"
-              />
-            </div>
-            <p className="text-[11px] text-slate-400 mt-1">
-              This link is sent with 1 click to verified devotees via WhatsApp and Email on the day of the Puja.
-            </p>
-          </div>
-
-          {/* Status */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Puja Status
-            </label>
-            <select
-              value={pujaStatus}
-              onChange={(e) => setPujaStatus(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-blue-600"
-            >
-              <option value="upcoming">Upcoming</option>
-              <option value="ongoing">Ongoing (Live Today)</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-          </div>
-
-          {/* Toggles */}
-          <div className="flex items-center gap-6 pt-5">
-            <label className="flex items-center gap-2 text-xs font-semibold text-slate-800 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isFeatured}
-                onChange={(e) => setIsFeatured(e.target.checked)}
-                className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4"
-              />
-              <span>Feature on Website Hero Banner Slider</span>
-            </label>
-
-            <label className="flex items-center gap-2 text-xs font-semibold text-slate-800 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={isActive}
-                onChange={(e) => setIsActive(e.target.checked)}
-                className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4"
-              />
-              <span>Active & Published</span>
-            </label>
-          </div>
-        </div>
-      </div>
-
-      {/* SECTION 4: Dynamic Packages Builder */}
-      <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-xs space-y-5">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-          <div>
-            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <IndianRupee className="w-4 h-4 text-emerald-600" />
-              <span>Puja Packages & Pricing</span>
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Define Single Person, Couple, and Family packages shown on the website (Screenshot 1).
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleAddPackage}
-            className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-semibold rounded-lg flex items-center gap-1 transition-colors"
-          >
-            <Plus className="w-3.5 h-3.5" /> Add Package
-          </button>
-        </div>
-
-        <div className="space-y-4">
-          {packages.map((pkg, idx) => (
-            <div
-              key={pkg.id || idx}
-              className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3 text-left relative"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                  Package #{idx + 1}
-                </span>
-                {packages.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => handleRemovePackage(idx)}
-                    className="text-slate-400 hover:text-red-600 transition-colors p-1"
-                    title="Remove Package"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                {/* Name */}
-                <div className="sm:col-span-2">
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                    Package Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={pkg.name || ''}
-                    onChange={(e) => handlePackageChange(idx, 'name', e.target.value)}
-                    placeholder="e.g. Individual Puja"
-                    required
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white"
-                  />
-                </div>
-
-                {/* Package Type */}
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                    Type
-                  </label>
-                  <select
-                    value={pkg.package_type || 'single'}
-                    onChange={(e) => handlePackageChange(idx, 'package_type', e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white"
-                  >
-                    <option value="single">Single Person (1)</option>
-                    <option value="couple">Couple / Partner (2)</option>
-                    <option value="family">Family (3-5)</option>
-                    <option value="group">Group (5+)</option>
-                  </select>
-                </div>
-
-                {/* Max Persons */}
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                    Max Persons
-                  </label>
-                  <input
-                    type="number"
-                    value={pkg.max_persons || 1}
-                    onChange={(e) => handlePackageChange(idx, 'max_persons', Number(e.target.value))}
-                    min={1}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white"
-                  />
-                </div>
-
-                {/* Price */}
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                    Dakshina Price (₹) *
-                  </label>
-                  <input
-                    type="number"
-                    value={pkg.price || 0}
-                    onChange={(e) => handlePackageChange(idx, 'price', Number(e.target.value))}
-                    required
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white font-semibold text-emerald-700"
-                  />
-                </div>
-
-                {/* Original Strikethrough Price */}
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                    Original Price (₹)
-                  </label>
-                  <input
-                    type="number"
-                    value={pkg.original_price || ''}
-                    onChange={(e) => handlePackageChange(idx, 'original_price', Number(e.target.value))}
-                    placeholder="1250"
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white"
-                  />
-                </div>
-
-                {/* Badge Text */}
-                <div className="sm:col-span-2">
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                    Highlight Badge (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={pkg.badge_text || ''}
-                    onChange={(e) => handlePackageChange(idx, 'badge_text', e.target.value)}
-                    placeholder="e.g. Recommended, Best Value, Popular"
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white"
-                  />
-                </div>
-
-                {/* Inclusions */}
-                <div className="sm:col-span-4">
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                    Inclusions (Comma separated)
-                  </label>
-                  <input
-                    type="text"
-                    value={Array.isArray(pkg.inclusions) ? pkg.inclusions.join(', ') : ''}
-                    onChange={(e) =>
-                      handlePackageChange(
-                        idx,
-                        'inclusions',
-                        e.target.value.split(',').map((s) => s.trim()).filter(Boolean)
-                      )
-                    }
-                    placeholder="1 Person Gotra & Name recited, WhatsApp Video, Free Aashirwad Box"
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white"
-                  />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* SECTION 5: Vedic Process Steps Builder ("How the Puja is Performed Step-by-Step") */}
-      <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-xs space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
-          <div>
-            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <ListOrdered className="w-4 h-4 text-[#B88E4B]" />
-              <span>Vedic Process Steps (&ldquo;How the Puja is Performed Step-by-Step&rdquo;)</span>
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              These steps are displayed under the Vedic Process tab on the website (Screenshot 1). You can add, edit, reorder, or delete steps.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleResetProcessSteps}
-              className="px-2.5 py-1.5 border border-slate-200 hover:bg-slate-100 text-slate-600 text-xs font-medium rounded-lg flex items-center gap-1 transition-colors"
-              title="Reset to 4 standard Vedic ritual steps"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Reset Template</span>
-            </button>
-            <button
-              type="button"
-              onClick={handleAddProcessStep}
-              className="px-3 py-1.5 bg-[#B88E4B] hover:bg-[#a67d3d] text-white text-xs font-semibold rounded-lg flex items-center gap-1 transition-colors shadow-xs"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add Step</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          {processSteps.length === 0 ? (
-            <div className="text-center py-8 border border-dashed border-slate-200 rounded-xl text-xs text-slate-500">
-              No steps defined. Click &ldquo;Add Step&rdquo; or &ldquo;Reset Template&rdquo; to add standard Vedic ritual steps.
-            </div>
-          ) : (
-            processSteps.map((stepItem, idx) => (
-              <div
-                key={idx}
-                className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 space-y-3 text-left relative"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-7 h-7 rounded-full bg-[#B88E4B] text-white font-bold text-xs flex items-center justify-center shadow-xs">
-                      {idx + 1}
-                    </span>
-                    <span className="text-xs font-bold text-slate-700">
-                      Step #{idx + 1}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      disabled={idx === 0}
-                      onClick={() => handleMoveProcessStep(idx, 'up')}
-                      className="p-1 text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors"
-                      title="Move Up"
-                    >
-                      <ChevronUp className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      disabled={idx === processSteps.length - 1}
-                      onClick={() => handleMoveProcessStep(idx, 'down')}
-                      className="p-1 text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors"
-                      title="Move Down"
-                    >
-                      <ChevronDown className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveProcessStep(idx)}
-                      className="text-slate-400 hover:text-red-600 transition-colors p-1 ml-1"
-                      title="Remove Step"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                      Step Title *
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Puja Title * <span className="text-slate-400 font-normal">(Devotee heading)</span>
                     </label>
                     <input
                       type="text"
-                      value={stepItem.title}
-                      onChange={(e) => handleProcessStepChange(idx, 'title', e.target.value)}
-                      placeholder="e.g. Devotee Sankalp"
+                      value={title}
+                      onChange={(e) => handleTitleChange(e.target.value)}
+                      placeholder="e.g. Sarva Pitru Shanti Mahapuja at Gaya Ji"
                       required
-                      className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:outline-none focus:border-blue-600"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:border-amber-600"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Temple & Location *
+                    </label>
+                    <div className="relative">
+                      <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
+                      <input
+                        type="text"
+                        value={locationName}
+                        onChange={(e) => setLocationName(e.target.value)}
+                        placeholder="Vishnu Pad Mandir, Gaya Ji, Bihar"
+                        required
+                        className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:border-amber-600"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Starting Dakshina (₹) *
+                    </label>
+                    <div className="relative">
+                      <IndianRupee className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
+                      <input
+                        type="number"
+                        min="1"
+                        value={startingPrice}
+                        onChange={(e) => {
+                          const val = Number(e.target.value);
+                          setStartingPrice(val);
+                          // Auto update package 1 price
+                          setPackages((prev) =>
+                            prev.map((pkg, i) => (i === 0 ? { ...pkg, price: val } : pkg))
+                          );
+                        }}
+                        required
+                        className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold text-slate-900 focus:outline-none focus:border-amber-600"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Tithi / Muhurat Badge
+                    </label>
+                    <input
+                      type="text"
+                      value={tithiDetails}
+                      onChange={(e) => setTithiDetails(e.target.value)}
+                      placeholder="e.g. Shukla Trayodashi (Som Pradosh)"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:border-amber-600"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-semibold text-slate-700">URL Slug</label>
+                      <button
+                        type="button"
+                        onClick={() => setIsSlugManual(!isSlugManual)}
+                        className="text-[10px] text-amber-700 hover:underline"
+                      >
+                        {isSlugManual ? 'Auto-sync from title' : 'Edit slug'}
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      value={slug}
+                      readOnly={!isSlugManual}
+                      onChange={(e) => setSlug(e.target.value)}
+                      placeholder="sarva-pitru-shanti-puja-gaya"
+                      className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-mono ${
+                        isSlugManual
+                          ? 'border-slate-300 bg-white'
+                          : 'border-slate-200 bg-slate-50 text-slate-600'
+                      }`}
                     />
                   </div>
 
                   <div className="sm:col-span-2">
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                      Step Description / Vedic Action *
-                    </label>
-                    <textarea
-                      value={stepItem.description}
-                      onChange={(e) => handleProcessStepChange(idx, 'description', e.target.value)}
-                      placeholder="e.g. Purohit recites your Name, Gotra, and wish before the sacred Falgu river altar."
-                      rows={2}
-                      required
-                      className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:outline-none focus:border-blue-600"
-                    />
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* SECTION 6: Frequently Asked Questions (FAQs) */}
-      <div className="bg-white p-5 sm:p-6 rounded-xl border border-slate-200 shadow-xs space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
-          <div>
-            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <HelpCircle className="w-4 h-4 text-amber-600" />
-              <span>Frequently Asked Questions (FAQs)</span>
-            </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Fixed standard temple defaults are automatically pre-populated (Screenshot 2). Admin can edit, add, or delete questions according to needs.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleResetFaqs}
-              className="px-2.5 py-1.5 border border-slate-200 hover:bg-slate-100 text-slate-600 text-xs font-medium rounded-lg flex items-center gap-1 transition-colors"
-              title="Reset to fixed standard default FAQs"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Reset Default FAQs</span>
-            </button>
-            <button
-              type="button"
-              onClick={handleAddFaq}
-              className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-lg flex items-center gap-1 transition-colors shadow-xs"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Add FAQ</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          {faqs.length === 0 ? (
-            <div className="text-center py-8 border border-dashed border-slate-200 rounded-xl text-xs text-slate-500">
-              No FAQs defined. Click &ldquo;Add FAQ&rdquo; or &ldquo;Reset Default FAQs&rdquo; to load fixed temple questions.
-            </div>
-          ) : (
-            faqs.map((faq, idx) => (
-              <div
-                key={idx}
-                className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 space-y-3 text-left relative"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-full border border-amber-600 text-amber-700 font-bold text-xs flex items-center justify-center bg-amber-50">
-                      ?
-                    </span>
-                    <span className="text-xs font-bold text-slate-700">
-                      FAQ #{idx + 1}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      disabled={idx === 0}
-                      onClick={() => handleMoveFaq(idx, 'up')}
-                      className="p-1 text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors"
-                      title="Move Up"
-                    >
-                      <ChevronUp className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      disabled={idx === faqs.length - 1}
-                      onClick={() => handleMoveFaq(idx, 'down')}
-                      className="p-1 text-slate-400 hover:text-slate-700 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors"
-                      title="Move Down"
-                    >
-                      <ChevronDown className="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveFaq(idx)}
-                      className="text-slate-400 hover:text-red-600 transition-colors p-1 ml-1"
-                      title="Remove FAQ"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                      Question *
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Subtitle / One-line Blessing
                     </label>
                     <input
                       type="text"
-                      value={faq.question}
-                      onChange={(e) => handleFaqChange(idx, 'question', e.target.value)}
-                      placeholder="e.g. Do I need to be physically present at Gaya?"
-                      required
-                      className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:outline-none focus:border-blue-600 font-medium text-slate-800"
+                      value={subtitle}
+                      onChange={(e) => setSubtitle(e.target.value)}
+                      placeholder="Ancestral peace and divine blessings across seven generations"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:border-amber-600"
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                      Answer *
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Short Overview Summary <span className="text-slate-400 font-normal">(Shows in catalog cards)</span>
                     </label>
                     <textarea
-                      value={faq.answer}
-                      onChange={(e) => handleFaqChange(idx, 'answer', e.target.value)}
-                      placeholder="e.g. No. The Puja is performed on your behalf by authenticated Purohits..."
-                      rows={3}
-                      required
-                      className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:outline-none focus:border-blue-600"
+                      rows={2}
+                      value={shortDescription}
+                      onChange={(e) => setShortDescription(e.target.value)}
+                      placeholder="Brief overview of the ritual, its sacred significance, and what devotees receive..."
+                      className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:border-amber-600"
                     />
                   </div>
                 </div>
               </div>
-            ))
+
+              {/* Card 2: Dates with Fast Helper Buttons */}
+              <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                  <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-emerald-600" />
+                    <span>Puja Date & Enrollment Window</span>
+                  </h2>
+
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] text-slate-400 font-medium">Quick Dates:</span>
+                    <button
+                      type="button"
+                      onClick={() => applyDatePreset(3)}
+                      className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[10px] font-semibold"
+                    >
+                      +3 Days
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyDatePreset(7)}
+                      className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[10px] font-semibold"
+                    >
+                      +7 Days
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyDatePreset(14)}
+                      className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[10px] font-semibold"
+                    >
+                      +14 Days
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Event Date & Time *
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={eventDate}
+                      onChange={(e) => setEventDate(e.target.value)}
+                      required
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:border-amber-600"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Enrollment Closing Date *
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={enrollmentEndDate}
+                      onChange={(e) => setEnrollmentEndDate(e.target.value)}
+                      required
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:border-amber-600"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 3: Featured Banner Media */}
+              <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4 text-purple-600" />
+                    <span>Featured Banner Photo</span>
+                  </h2>
+                  <span className="text-[11px] text-slate-400">Shows on hero banner slider & cards</span>
+                </div>
+
+                {/* Curated 1-click photo chips */}
+                <div className="space-y-2">
+                  <span className="text-xs font-semibold text-slate-700 block">
+                    Choose from Curated Sacred Temple Presets:
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+                    {SACRED_IMAGE_PRESETS.map((p, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setBannerImageUrl(p.url)}
+                        className={`relative aspect-[4/3] rounded-xl overflow-hidden border-2 transition-all group ${
+                          bannerImageUrl === p.url
+                            ? 'border-amber-600 ring-2 ring-amber-400'
+                            : 'border-transparent hover:border-slate-300'
+                        }`}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={p.url} alt={p.label} className="w-full h-full object-cover" />
+                        <div className="absolute inset-0 bg-black/40 flex items-end p-1 text-[9px] text-white font-medium leading-tight text-left">
+                          {p.label}
+                        </div>
+                        {bannerImageUrl === p.url && (
+                          <div className="absolute top-1 right-1 w-4 h-4 rounded-full bg-amber-600 text-white flex items-center justify-center">
+                            <Check className="w-3 h-3" />
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Upload or manual URL */}
+                <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center gap-3">
+                  <label className="cursor-pointer px-4 py-2 bg-purple-700 hover:bg-purple-800 text-white text-xs font-semibold rounded-xl flex items-center gap-2 shadow-xs transition-colors">
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Uploading...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4" />
+                        <span>Upload From Device</span>
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      disabled={isUploading}
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                  </label>
+
+                  <span className="text-xs text-slate-400">or enter image URL:</span>
+
+                  <input
+                    type="url"
+                    value={bannerImageUrl}
+                    onChange={(e) => setBannerImageUrl(e.target.value)}
+                    placeholder="https://images.unsplash.com/..."
+                    className="flex-1 min-w-[200px] px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-mono"
+                  />
+                </div>
+
+                {uploadFeedback && (
+                  <p className="text-xs font-medium text-emerald-700">{uploadFeedback}</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: PACKAGES & PRICING */}
+          {activeTab === 'packages' && (
+            <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                <div>
+                  <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-blue-600" />
+                    <span>Devotee Packages & Dakshina Options</span>
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Pre-populated with 3 authentic packages. You can customize prices or toggle any package on/off.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPackages([
+                      ...packages,
+                      {
+                        id: `pkg-${Date.now()}`,
+                        name: 'Custom Puja Package',
+                        package_type: 'single',
+                        max_persons: 1,
+                        price: 999,
+                        inclusions: ['Personalized Sankalp', 'WhatsApp Video Recording'],
+                        display_order: packages.length + 1,
+                        is_active: true,
+                      },
+                    ])
+                  }
+                  className="px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors self-start sm:self-auto"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Package</span>
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {packages.map((pkg, idx) => (
+                  <div
+                    key={pkg.id || idx}
+                    className={`p-4 rounded-xl border transition-all ${
+                      pkg.is_active !== false
+                        ? 'bg-slate-50/50 border-slate-200'
+                        : 'bg-slate-100/60 border-slate-200 opacity-60'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                      <div className="flex items-center gap-2 flex-1">
+                        <span className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center">
+                          {idx + 1}
+                        </span>
+                        <input
+                          type="text"
+                          value={pkg.name || ''}
+                          onChange={(e) => {
+                            const updated = [...packages];
+                            updated[idx] = { ...updated[idx], name: e.target.value };
+                            setPackages(updated);
+                          }}
+                          placeholder="Package Name"
+                          className="font-bold text-sm text-slate-900 bg-transparent border-b border-dashed border-slate-300 focus:outline-none focus:border-amber-600 px-1 py-0.5 flex-1 max-w-xs"
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={pkg.is_active !== false}
+                            onChange={(e) => {
+                              const updated = [...packages];
+                              updated[idx] = { ...updated[idx], is_active: e.target.checked };
+                              setPackages(updated);
+                            }}
+                            className="rounded text-emerald-600"
+                          />
+                          <span className="text-[11px] font-medium">
+                            {pkg.is_active !== false ? 'Active' : 'Disabled'}
+                          </span>
+                        </label>
+
+                        {packages.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => setPackages(packages.filter((_, i) => i !== idx))}
+                            className="p-1 text-slate-400 hover:text-red-600 rounded"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                      <div>
+                        <label className="text-slate-500 block mb-1">Dakshina Price (₹)</label>
+                        <input
+                          type="number"
+                          value={pkg.price || ''}
+                          onChange={(e) => {
+                            const updated = [...packages];
+                            updated[idx] = { ...updated[idx], price: Number(e.target.value) };
+                            setPackages(updated);
+                          }}
+                          className="w-full px-3 py-1.5 rounded-lg border border-slate-300 font-bold text-slate-900 bg-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-slate-500 block mb-1">Original Price (₹)</label>
+                        <input
+                          type="number"
+                          value={pkg.original_price || ''}
+                          onChange={(e) => {
+                            const updated = [...packages];
+                            updated[idx] = { ...updated[idx], original_price: Number(e.target.value) };
+                            setPackages(updated);
+                          }}
+                          placeholder="MRP"
+                          className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 bg-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-slate-500 block mb-1">Max Devotees</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={pkg.max_persons || 1}
+                          onChange={(e) => {
+                            const updated = [...packages];
+                            updated[idx] = { ...updated[idx], max_persons: Number(e.target.value) };
+                            setPackages(updated);
+                          }}
+                          className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 bg-white"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-slate-500 block mb-1">Badge Tag</label>
+                        <input
+                          type="text"
+                          value={pkg.badge_text || ''}
+                          onChange={(e) => {
+                            const updated = [...packages];
+                            updated[idx] = { ...updated[idx], badge_text: e.target.value };
+                            setPackages(updated);
+                          }}
+                          placeholder="e.g. Best Value"
+                          className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 bg-white"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Inclusions */}
+                    <div className="mt-3 pt-3 border-t border-slate-200/60 text-xs">
+                      <label className="text-slate-500 block mb-1">Inclusions (What Devotee Receives):</label>
+                      <input
+                        type="text"
+                        value={Array.isArray(pkg.inclusions) ? pkg.inclusions.join(', ') : ''}
+                        onChange={(e) => {
+                          const updated = [...packages];
+                          updated[idx] = {
+                            ...updated[idx],
+                            inclusions: e.target.value.split(',').map((s) => s.trim()).filter(Boolean),
+                          };
+                          setPackages(updated);
+                        }}
+                        placeholder="Comma separated: Gotra Recitation, Video Proof, Prasad Box"
+                        className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-slate-700 bg-white"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: VEDIC DETAILS & LIVE LINK */}
+          {activeTab === 'vedic' && (
+            <div className="space-y-6">
+              {/* Meeting Link & Status */}
+              <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
+                <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
+                  <Video className="w-4 h-4 text-purple-600" />
+                  <span>Live Stream & Event Settings</span>
+                </h2>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Live Stream Meeting Link <span className="text-slate-400 font-normal">(Sent to devotees)</span>
+                    </label>
+                    <input
+                      type="url"
+                      value={meetingLink}
+                      onChange={(e) => setMeetingLink(e.target.value)}
+                      placeholder="https://meet.google.com/..."
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:border-amber-600 font-mono text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Puja Status</label>
+                    <select
+                      value={pujaStatus}
+                      onChange={(e) => setPujaStatus(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm bg-white focus:outline-none"
+                    >
+                      <option value="upcoming">Upcoming (Accepting Bookings)</option>
+                      <option value="ongoing">Ongoing (Puja Happening Live)</option>
+                      <option value="completed">Completed (Ritual Finished)</option>
+                      <option value="cancelled">Cancelled</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-6 pt-5">
+                    <label className="flex items-center gap-2 text-xs font-semibold text-slate-800 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isFeatured}
+                        onChange={(e) => setIsFeatured(e.target.checked)}
+                        className="rounded text-amber-600"
+                      />
+                      <span>Featured on Homepage Banner</span>
+                    </label>
+
+                    <label className="flex items-center gap-2 text-xs font-semibold text-slate-800 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isActive}
+                        onChange={(e) => setIsActive(e.target.checked)}
+                        className="rounded text-emerald-600"
+                      />
+                      <span>Active & Listed</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Full Spiritual Significance Description */}
+              <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
+                <h2 className="text-sm font-bold text-slate-900 border-b border-slate-100 pb-3">
+                  Complete Spiritual Description & Significance
+                </h2>
+                <textarea
+                  rows={4}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Detailed spiritual history of the temple, Vedic mantras recited, and benefits of participating..."
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:border-amber-600"
+                />
+              </div>
+
+              {/* Benefits */}
+              <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <h2 className="text-sm font-bold text-slate-900">Key Spiritual Benefits ({benefits.length})</h2>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setBenefits([...benefits, { title: 'New Blessing', description: 'Description of blessing' }])
+                    }
+                    className="text-xs text-amber-700 hover:underline flex items-center gap-1"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Add Benefit
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {benefits.map((b, idx) => (
+                    <div key={idx} className="flex items-start gap-2 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                      <div className="flex-1 space-y-2 text-xs">
+                        <input
+                          type="text"
+                          value={b.title}
+                          onChange={(e) => {
+                            const updated = [...benefits];
+                            updated[idx] = { ...updated[idx], title: e.target.value };
+                            setBenefits(updated);
+                          }}
+                          placeholder="Benefit Title"
+                          className="w-full font-semibold px-2 py-1 bg-white rounded border border-slate-200"
+                        />
+                        <textarea
+                          rows={2}
+                          value={b.description}
+                          onChange={(e) => {
+                            const updated = [...benefits];
+                            updated[idx] = { ...updated[idx], description: e.target.value };
+                            setBenefits(updated);
+                          }}
+                          placeholder="Benefit description..."
+                          className="w-full px-2 py-1 bg-white rounded border border-slate-200"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setBenefits(benefits.filter((_, i) => i !== idx))}
+                        className="text-slate-400 hover:text-red-600 p-1"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           )}
         </div>
-      </div>
 
-      {/* Bottom Save Bar */}
-      <div className="flex justify-end gap-3 pt-4">
-        <button
-          type="button"
-          onClick={() => router.push('/admin/pujas')}
-          className="px-6 py-2.5 border border-slate-300 text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-50"
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="px-8 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold rounded-lg shadow-sm flex items-center gap-1.5 disabled:opacity-50"
-        >
-          <Save className="w-4 h-4" />
-          <span>{isSubmitting ? 'Saving...' : 'Save & Publish Puja Event'}</span>
-        </button>
+        {/* SIDEBAR: DEVOTEE LIVE PREVIEW CARD (4 COLS ON DESKTOP) */}
+        <div className="lg:col-span-4 sticky top-24 space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+              <Eye className="w-4 h-4 text-amber-600" />
+              <span>Devotee Card Live Preview</span>
+            </span>
+            <span className="text-[10px] text-slate-400 font-medium">As shown on website</span>
+          </div>
+
+          {/* Actual Replica Card */}
+          <div className="bg-white rounded-2xl border border-amber-200/80 overflow-hidden shadow-lg flex flex-col justify-between">
+            <div>
+              {/* Banner */}
+              <div className="relative aspect-[16/9] w-full bg-slate-100 overflow-hidden">
+                {bannerImageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={bannerImageUrl}
+                    alt="Card Preview"
+                    className="w-full h-full object-cover object-center"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs">
+                    No Image Selected
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
+
+                <div className="absolute top-2.5 left-2.5 bg-slate-900/90 backdrop-blur-md px-2 py-0.5 rounded text-[10px] uppercase font-semibold text-white flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Live Stream
+                </div>
+
+                <div className="absolute bottom-2.5 left-2.5 right-2.5 text-white">
+                  <span className="text-xs font-medium flex items-center gap-1 text-amber-300 truncate">
+                    <MapPin className="w-3 h-3 shrink-0" />
+                    <span className="truncate">{locationName || 'Sacred Temple'}</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Card Body */}
+              <div className="p-4 space-y-3">
+                {tithiDetails && (
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-amber-800 bg-amber-100/60 px-2 py-0.5 rounded inline-block">
+                    {tithiDetails}
+                  </div>
+                )}
+
+                <h3 className="font-serif-heading text-base font-bold text-slate-900 leading-snug line-clamp-2">
+                  {title || 'Untitled Sacred Puja'}
+                </h3>
+
+                <p className="text-slate-600 text-xs line-clamp-2 leading-relaxed">
+                  {shortDescription || subtitle || description || 'Spiritual ritual conducted by Vedic Pandits.'}
+                </p>
+
+                <div className="pt-2 border-t border-slate-100 text-xs text-slate-600 space-y-1">
+                  <div className="flex items-center gap-1.5 text-slate-700">
+                    <Calendar className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Event Date: <strong>{formattedPreviewDate}</strong></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Dakshina */}
+            <div className="p-4 pt-0">
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                <div>
+                  <span className="text-[9px] uppercase text-slate-400 tracking-wider block">Dakshina</span>
+                  <span className="font-bold text-base text-amber-700 font-serif-heading">
+                    ₹{startingPrice} <span className="text-[10px] font-normal text-slate-500">onwards</span>
+                  </span>
+                </div>
+
+                <div className="px-3.5 py-1.5 bg-slate-900 text-amber-400 rounded-lg text-xs font-semibold flex items-center gap-1 shadow-xs">
+                  <span>Participate</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500 space-y-1.5">
+            <div className="flex items-center gap-1 text-slate-700 font-medium">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Real-time Sync Active</span>
+            </div>
+            <p className="text-[11px] leading-relaxed">
+              Upon clicking &quot;Publish&quot;, this event is immediately visible to visitors on{' '}
+              <span className="font-semibold text-slate-700">/puja</span> and homepage banner slider.
+            </p>
+          </div>
+        </div>
       </div>
-    </form>
+    </div>
   );
 }
