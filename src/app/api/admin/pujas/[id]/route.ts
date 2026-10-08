@@ -28,7 +28,7 @@ export async function PATCH(request: Request, { params }: RouteProps) {
     const body = await request.json();
     const { packages, ...pujaData } = body;
 
-    const updated = await saveAdminPuja({ ...pujaData, id }, packages);
+    const updated = await saveAdminPuja({ ...pujaData, id }, packages, { isEdit: true });
     return NextResponse.json({ success: true, puja: updated });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Failed to update puja' }, { status: 500 });

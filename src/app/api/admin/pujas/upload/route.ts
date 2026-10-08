@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/server';
+import { deleteStorageImages } from '@/lib/pujaData';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -82,6 +83,45 @@ export async function POST(request: Request) {
     console.error('Upload handler error:', err);
     return NextResponse.json(
       { error: err.message || 'Image upload failed. Please try again.' },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE /api/admin/pujas/upload — Remove image(s) from Supabase Storage
+export async function DELETE(request: Request) {
+  try {
+    const body = await request.json().catch(() => ({}));
+    const rawItems: string[] = [];
+
+    if (typeof body.url === 'string') rawItems.push(body.url);
+    if (typeof body.path === 'string') rawItems.push(body.path);
+    if (Array.isArray(body.urls)) {
+      rawItems.push(...body.urls.filter((u: any) => typeof u === 'string'));
+    }
+    if (Array.isArray(body.paths)) {
+      rawItems.push(...body.paths.filter((p: any) => typeof p === 'string'));
+    }
+
+    if (rawItems.length === 0) {
+      return NextResponse.json(
+        { error: 'No image URL or path provided for deletion' },
+        { status: 400 }
+      );
+    }
+
+    const removed = await deleteStorageImages(rawItems, 'pujas');
+
+    return NextResponse.json({
+      success: true,
+      message: 'Image(s) deleted from storage successfully',
+      removedCount: removed.length,
+      removedPaths: removed,
+    });
+  } catch (err: any) {
+    console.error('Delete upload handler error:', err);
+    return NextResponse.json(
+      { error: err.message || 'Failed to delete image from storage' },
       { status: 500 }
     );
   }

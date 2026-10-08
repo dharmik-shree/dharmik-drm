@@ -269,9 +269,11 @@ export default function PujaForm({ initialPuja, isEdit = false }: PujaFormProps)
     initialPuja?.meeting_link || 'https://meet.google.com/dharmik-puja-live'
   );
 
-  // Upload States
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadFeedback, setUploadFeedback] = useState('');
+  // Upload & Storage States
+  const [isUploadingBanner, setIsUploadingBanner] = useState<boolean>(false);
+  const [isUploadingGallery, setIsUploadingGallery] = useState<boolean>(false);
+  const [isDeletingImage, setIsDeletingImage] = useState<boolean>(false);
+  const [uploadFeedback, setUploadFeedback] = useState<string>('');
 
   // Packages State - Pre-loaded with 3 standard packages
   const defaultInitialPackages: Partial<PujaPackageRecord>[] = [
@@ -389,12 +391,12 @@ export default function PujaForm({ initialPuja, isEdit = false }: PujaFormProps)
     );
   };
 
-  // Device upload
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Upload single banner image to Supabase
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setIsUploading(true);
+    setIsUploadingBanner(true);
     setUploadFeedback('');
     try {
       const fd = new FormData();
@@ -407,13 +409,83 @@ export default function PujaForm({ initialPuja, isEdit = false }: PujaFormProps)
       if (!res.ok) throw new Error(data.error || 'Failed to upload photo');
       if (data.url) {
         setBannerImageUrl(data.url);
-        setUploadFeedback('Banner image uploaded successfully!');
+        setUploadFeedback('Banner photo uploaded to Supabase "pujas" bucket successfully!');
       }
     } catch (err: any) {
       setUploadFeedback(`Upload error: ${err.message}`);
     } finally {
-      setIsUploading(false);
+      setIsUploadingBanner(false);
       e.target.value = '';
+    }
+  };
+
+  // Delete banner image from Supabase backend storage
+  const handleDeleteBannerImage = async () => {
+    if (!bannerImageUrl) return;
+    setIsDeletingImage(true);
+    try {
+      if (bannerImageUrl.includes('/storage/v1/object/') || bannerImageUrl.includes('/pujas/')) {
+        await fetch('/api/admin/pujas/upload', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: bannerImageUrl }),
+        });
+      }
+      setBannerImageUrl('');
+      setUploadFeedback('Banner photo removed and deleted from Supabase storage.');
+    } catch (err: any) {
+      console.warn('Error deleting banner image from backend:', err);
+      setBannerImageUrl('');
+    } finally {
+      setIsDeletingImage(false);
+    }
+  };
+
+  // Upload multiple gallery photos to Supabase
+  const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploadingGallery(true);
+    setUploadFeedback('');
+    try {
+      const fd = new FormData();
+      for (let i = 0; i < files.length; i++) {
+        fd.append(`file_${i}`, files[i]);
+      }
+      const res = await fetch('/api/admin/pujas/upload', {
+        method: 'POST',
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to upload gallery photos');
+      if (Array.isArray(data.urls) && data.urls.length > 0) {
+        setGalleryImages((prev) => [...prev, ...data.urls]);
+        setUploadFeedback(`${data.urls.length} gallery photo(s) uploaded to Supabase storage!`);
+      }
+    } catch (err: any) {
+      setUploadFeedback(`Gallery upload error: ${err.message}`);
+    } finally {
+      setIsUploadingGallery(false);
+      e.target.value = '';
+    }
+  };
+
+  // Delete single gallery image from Supabase backend storage
+  const handleDeleteGalleryImage = async (imgUrl: string, index: number) => {
+    try {
+      if (imgUrl.includes('/storage/v1/object/') || imgUrl.includes('/pujas/')) {
+        await fetch('/api/admin/pujas/upload', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: imgUrl }),
+        });
+      }
+      setGalleryImages((prev) => prev.filter((_, i) => i !== index));
+      setUploadFeedback('Gallery photo removed and deleted from Supabase storage.');
+    } catch (err: any) {
+      console.warn('Error deleting gallery photo from storage:', err);
+      setGalleryImages((prev) => prev.filter((_, i) => i !== index));
     }
   };
 
@@ -462,6 +534,7 @@ export default function PujaForm({ initialPuja, isEdit = false }: PujaFormProps)
           : defaultInitialPackages;
 
       const payload = {
+        id: initialPuja?.id,
         title: title.trim(),
         slug: finalSlug,
         subtitle: subtitle.trim(),
@@ -897,84 +970,264 @@ export default function PujaForm({ initialPuja, isEdit = false }: PujaFormProps)
                 </div>
               </div>
 
-              {/* Card 3: Featured Banner Media */}
-              <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                  <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                    <ImageIcon className="w-4 h-4 text-purple-600" />
-                    <span>Featured Banner Photo</span>
-                  </h2>
-                  <span className="text-[11px] text-slate-400">Shows on hero banner slider & cards</span>
+              {/* Card 3: Sacred Images & Media (Banner & Gallery) */}
+              <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                  <div>
+                    <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                      <ImageIcon className="w-4 h-4 text-purple-600" />
+                      <span>Sacred Images & Media</span>
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Upload high-resolution images stored securely in your Supabase &quot;pujas&quot; storage bucket.
+                    </p>
+                  </div>
+                  <span className="text-[11px] font-semibold text-purple-700 bg-purple-50 px-2.5 py-1 rounded-full border border-purple-200 flex items-center gap-1 self-start sm:self-auto">
+                    <Sparkles className="w-3 h-3 text-purple-600" />
+                    <span>Supabase Storage Connected</span>
+                  </span>
                 </div>
 
-                {/* Curated 1-click photo chips */}
-                <div className="space-y-2">
-                  <span className="text-xs font-semibold text-slate-700 block">
-                    Choose from Curated Sacred Temple Presets:
-                  </span>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
-                    {SACRED_IMAGE_PRESETS.map((p, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => setBannerImageUrl(p.url)}
-                        className={`relative aspect-[4/3] rounded-xl overflow-hidden border-2 transition-all group ${
-                          bannerImageUrl === p.url
-                            ? 'border-amber-600 ring-2 ring-amber-400'
-                            : 'border-transparent hover:border-slate-300'
-                        }`}
-                      >
+                {/* 1. FEATURED BANNER PHOTO */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <span>Featured Banner Photo *</span>
+                      <span className="text-slate-400 font-normal">(Hero slider & catalog image)</span>
+                    </label>
+                    {bannerImageUrl && (
+                      <span className="text-[11px] font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                        <span>Active Banner Selected</span>
+                      </span>
+                    )}
+                  </div>
+
+                  {/* PREVIEW OF SELECTED BANNER */}
+                  {bannerImageUrl ? (
+                    <div className="relative rounded-2xl overflow-hidden border-2 border-amber-500/40 bg-slate-950 shadow-md group">
+                      <div className="relative aspect-[21/9] sm:aspect-[2.4/1] w-full max-h-72 overflow-hidden flex items-center justify-center">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={p.url} alt={p.label} className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-black/40 flex items-end p-1 text-[9px] text-white font-medium leading-tight text-left">
-                          {p.label}
-                        </div>
-                        {bannerImageUrl === p.url && (
-                          <div className="absolute top-1 right-1 w-4 h-4 rounded-full bg-amber-600 text-white flex items-center justify-center">
-                            <Check className="w-3 h-3" />
-                          </div>
+                        <img
+                          src={bannerImageUrl}
+                          alt="Selected banner preview"
+                          className="w-full h-full object-cover group-hover:scale-102 transition-transform duration-300"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                      </div>
+
+                      {/* Overlay Badges */}
+                      <div className="absolute top-3 left-3 flex flex-wrap items-center gap-2">
+                        <span className="px-2.5 py-1 rounded-lg bg-black/70 backdrop-blur-md text-white text-[11px] font-semibold flex items-center gap-1.5 border border-white/20">
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                          <span>Active Banner</span>
+                        </span>
+                        {bannerImageUrl.includes('supabase.co') ? (
+                          <span className="px-2.5 py-1 rounded-lg bg-blue-900/80 backdrop-blur-md text-blue-200 text-[11px] font-semibold border border-blue-400/30 flex items-center gap-1">
+                            ☁️ Stored in Supabase Bucket
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1 rounded-lg bg-amber-900/80 backdrop-blur-md text-amber-200 text-[11px] font-semibold border border-amber-400/30 flex items-center gap-1">
+                            🏛️ Temple Preset / Web
+                          </span>
                         )}
-                      </button>
-                    ))}
+                      </div>
+
+                      {/* Overlay Actions */}
+                      <div className="absolute bottom-3 right-3 left-3 flex items-center justify-between gap-2">
+                        <span className="text-[11px] text-white/80 font-mono truncate max-w-[260px] sm:max-w-md hidden sm:inline-block bg-black/60 px-2.5 py-1 rounded-lg backdrop-blur-xs">
+                          {bannerImageUrl}
+                        </span>
+                        <div className="flex items-center gap-2 ml-auto">
+                          <label className="cursor-pointer px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-800 text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-sm transition-colors">
+                            <Upload className="w-3.5 h-3.5 text-purple-600" />
+                            <span>Change Image</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              disabled={isUploadingBanner || isDeletingImage}
+                              onChange={handleBannerUpload}
+                              className="hidden"
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            onClick={handleDeleteBannerImage}
+                            disabled={isUploadingBanner || isDeletingImage}
+                            className="px-3 py-1.5 bg-red-600/90 hover:bg-red-700 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-sm transition-colors backdrop-blur-xs"
+                            title="Remove image and delete from Supabase storage backend"
+                          >
+                            {isDeletingImage ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-3.5 h-3.5" />
+                            )}
+                            <span>Remove</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    /* EMPTY STATE DROPZONE */
+                    <label className="border-2 border-dashed border-slate-300 hover:border-purple-500 rounded-2xl p-6 sm:p-8 flex flex-col items-center justify-center text-center cursor-pointer bg-slate-50/50 hover:bg-purple-50/20 transition-all group">
+                      <div className="w-12 h-12 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                        {isUploadingBanner ? (
+                          <Loader2 className="w-6 h-6 animate-spin" />
+                        ) : (
+                          <Upload className="w-6 h-6" />
+                        )}
+                      </div>
+                      <div className="text-sm font-bold text-slate-800 mb-1">
+                        {isUploadingBanner ? 'Uploading to Supabase Storage...' : 'Upload Featured Banner Photo'}
+                      </div>
+                      <p className="text-xs text-slate-500 max-w-sm mb-3">
+                        Click here to select a photo from your computer. Automatically stored in your Supabase &quot;pujas&quot; bucket.
+                      </p>
+                      <span className="px-3.5 py-1.5 rounded-lg bg-purple-700 group-hover:bg-purple-800 text-white text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-xs">
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Browse Device Photo</span>
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={isUploadingBanner}
+                        onChange={handleBannerUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
+
+                  {/* Presets & URL Options */}
+                  <div className="pt-2 flex flex-col gap-3">
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold text-slate-700">
+                          Or Choose from Sacred Temple Presets:
+                        </span>
+                        <span className="text-[11px] text-slate-400">Click any photo to select</span>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+                        {SACRED_IMAGE_PRESETS.map((p, idx) => {
+                          const isSelected = bannerImageUrl === p.url;
+                          return (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => {
+                                setBannerImageUrl(p.url);
+                                setUploadFeedback(`Selected preset: ${p.label}`);
+                              }}
+                              className={`relative aspect-[4/3] rounded-xl overflow-hidden border-2 transition-all group ${
+                                isSelected
+                                  ? 'border-amber-600 ring-2 ring-amber-400 shadow-sm'
+                                  : 'border-slate-200 hover:border-slate-300'
+                              }`}
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={p.url} alt={p.label} className="w-full h-full object-cover" />
+                              <div className="absolute inset-0 bg-black/45 flex items-end p-1.5 text-[10px] text-white font-medium leading-tight text-left">
+                                {p.label}
+                              </div>
+                              {isSelected && (
+                                <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-amber-600 text-white flex items-center justify-center shadow-xs">
+                                  <Check className="w-3 h-3 stroke-[3]" />
+                                </div>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-1">
+                      <span className="text-xs text-slate-500 whitespace-nowrap">Or Direct Image URL:</span>
+                      <input
+                        type="url"
+                        value={bannerImageUrl}
+                        onChange={(e) => setBannerImageUrl(e.target.value)}
+                        placeholder="https://..."
+                        className="flex-1 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-mono focus:outline-none focus:border-amber-600"
+                      />
+                    </div>
                   </div>
                 </div>
 
-                {/* Upload or manual URL */}
-                <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center gap-3">
-                  <label className="cursor-pointer px-4 py-2 bg-purple-700 hover:bg-purple-800 text-white text-xs font-semibold rounded-xl flex items-center gap-2 shadow-xs transition-colors">
-                    {isUploading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Uploading...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Upload className="w-4 h-4" />
-                        <span>Upload From Device</span>
-                      </>
-                    )}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      disabled={isUploading}
-                      onChange={handleFileUpload}
-                      className="hidden"
-                    />
-                  </label>
+                {/* 2. PUJA GALLERY PHOTOS */}
+                <div className="pt-4 border-t border-slate-100 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                        <span>Devotional Gallery Photos (Optional)</span>
+                        <span className="text-slate-400 font-normal">({galleryImages.length} uploaded)</span>
+                      </label>
+                      <p className="text-[11px] text-slate-500">
+                        Additional photos shown in the devotee gallery slider (temple sanctum, sacred havan, tapi river ghats).
+                      </p>
+                    </div>
+                    <label className="cursor-pointer px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-colors border border-purple-200">
+                      {isUploadingGallery ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span>Uploading to Supabase...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>+ Upload Gallery Photos</span>
+                        </>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        disabled={isUploadingGallery}
+                        onChange={handleGalleryUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
 
-                  <span className="text-xs text-slate-400">or enter image URL:</span>
-
-                  <input
-                    type="url"
-                    value={bannerImageUrl}
-                    onChange={(e) => setBannerImageUrl(e.target.value)}
-                    placeholder="https://images.unsplash.com/..."
-                    className="flex-1 min-w-[200px] px-3.5 py-2 rounded-xl border border-slate-300 text-xs font-mono"
-                  />
+                  {/* Gallery Grid */}
+                  {galleryImages.length > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2.5">
+                      {galleryImages.map((imgUrl, gIdx) => (
+                        <div
+                          key={gIdx}
+                          className="relative aspect-square rounded-xl overflow-hidden border border-slate-200 bg-slate-100 group shadow-xs"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={imgUrl} alt={`Gallery photo ${gIdx + 1}`} className="w-full h-full object-cover" />
+                          <div className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-black/60 text-white text-[9px] font-bold">
+                            #{gIdx + 1}
+                          </div>
+                          {imgUrl.includes('supabase.co') && (
+                            <div className="absolute bottom-1 left-1 px-1 rounded bg-blue-900/80 text-blue-200 text-[8px] font-medium">
+                              Supabase
+                            </div>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteGalleryImage(imgUrl, gIdx)}
+                            className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-600/90 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700 shadow-xs"
+                            title="Remove and delete photo from Supabase backend"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-4 rounded-xl border border-dashed border-slate-200 bg-slate-50/50 text-center text-xs text-slate-400">
+                      No additional gallery photos added yet. Click &quot;+ Upload Gallery Photos&quot; above to select multiple photos from device.
+                    </div>
+                  )}
                 </div>
 
                 {uploadFeedback && (
-                  <p className="text-xs font-medium text-emerald-700">{uploadFeedback}</p>
+                  <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-medium text-emerald-800 flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>{uploadFeedback}</span>
+                  </div>
                 )}
               </div>
             </div>
@@ -1326,6 +1579,13 @@ export default function PujaForm({ initialPuja, isEdit = false }: PujaFormProps)
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   Live Stream
                 </div>
+
+                {galleryImages.length > 0 && (
+                  <div className="absolute top-2.5 right-2.5 bg-black/75 backdrop-blur-md px-2 py-0.5 rounded text-[10px] font-semibold text-amber-300 flex items-center gap-1 border border-amber-400/30">
+                    <ImageIcon className="w-3 h-3 text-amber-400" />
+                    <span>+{galleryImages.length} Photos</span>
+                  </div>
+                )}
 
                 <div className="absolute bottom-2.5 left-2.5 right-2.5 text-white">
                   <span className="text-xs font-medium flex items-center gap-1 text-amber-300 truncate">

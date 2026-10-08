@@ -2,10 +2,58 @@ import { PujaRecord, PujaPackageRecord, PujaEnrollmentRecord, PujaEnrollmentPaym
 import { createAdminClient } from '@/lib/supabase/server';
 import { randomUUID } from 'crypto';
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 
 export function isUUID(val?: string | null): boolean {
-  return typeof val === 'string' && UUID_REGEX.test(val);
+  return typeof val === 'string' && UUID_REGEX.test(val.trim());
+}
+
+/**
+ * Extracts storage file path from a Supabase Storage public or signed URL.
+ * Returns null if the URL is not hosted on the specified Supabase storage bucket.
+ */
+export function extractStoragePath(urlOrPath: string, bucket = 'pujas'): string | null {
+  if (!urlOrPath || typeof urlOrPath !== 'string') return null;
+  const trimmed = urlOrPath.trim();
+  if (!trimmed) return null;
+
+  // If already a relative storage path (e.g. "puja-12345.png")
+  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+    return trimmed.replace(new RegExp(`^${bucket}/`), '');
+  }
+
+  // If a Supabase Storage URL
+  const pattern = new RegExp(`/storage/v1/object/(?:public|sign)/${bucket}/([^?#]+)`);
+  const match = trimmed.match(pattern);
+  if (match && match[1]) {
+    return decodeURIComponent(match[1]);
+  }
+
+  return null;
+}
+
+/**
+ * Deletes one or more images from a Supabase Storage bucket.
+ * Safely ignores external URLs (e.g. Unsplash).
+ */
+export async function deleteStorageImages(urlsOrPaths: string[], bucket = 'pujas'): Promise<string[]> {
+  const paths = urlsOrPaths
+    .map((u) => extractStoragePath(u, bucket))
+    .filter((p): p is string => Boolean(p));
+
+  if (paths.length === 0) return [];
+
+  try {
+    const supabase = createAdminClient();
+    const { data, error } = await supabase.storage.from(bucket).remove(paths);
+    if (error) {
+      console.warn('Notice removing files from Supabase storage bucket:', error);
+    }
+    return paths;
+  } catch (err) {
+    console.warn('Error removing files from Supabase storage bucket:', err);
+    return [];
+  }
 }
 
 function sanitizePujaPayload(data: Partial<PujaRecord>, targetId: string): Record<string, any> {
@@ -449,10 +497,13 @@ export async function fetchAdminPujaById(id: string): Promise<PujaRecord | null>
 
 export async function saveAdminPuja(
   data: Partial<PujaRecord>,
-  packages: Partial<PujaPackageRecord>[] = []
+  packages: Partial<PujaPackageRecord>[] = [],
+  options?: { isEdit?: boolean }
 ): Promise<PujaRecord> {
-  const isNew = !data.id || !isUUID(data.id);
-  const pujaId = isUUID(data.id) ? data.id! : randomUUID();
+  const isExplicitEdit = options?.isEdit === true;
+  const hasValidId = Boolean(data.id && isUUID(data.id));
+  const isNew = isExplicitEdit ? false : (!data.id || !isUUID(data.id));
+  const pujaId = hasValidId ? data.id! : (data.id && data.id.trim() ? data.id.trim() : randomUUID());
   const pujaPayload = sanitizePujaPayload(data, pujaId);
   const cleanPackages = sanitizePackages(packages, pujaId);
 
@@ -501,6 +552,18 @@ export async function saveAdminPuja(
       inMemoryPujas.unshift(fullPuja);
       return fullPuja;
     } else {
+      // Avoid slug conflict with any other puja (excluding self)
+      const { data: conflictingSlug } = await supabase
+        .from('pujas')
+        .select('id')
+        .eq('slug', pujaPayload.slug)
+        .neq('id', pujaId)
+        .maybeSingle();
+
+      if (conflictingSlug) {
+        pujaPayload.slug = `${pujaPayload.slug}-${Math.random().toString(36).substring(2, 6)}`;
+      }
+
       const { data: updatedPuja, error: uErr } = await supabase
         .from('pujas')
         .update(pujaPayload)
@@ -574,6 +637,26 @@ export async function saveAdminPuja(
 export async function deleteAdminPuja(id: string): Promise<boolean> {
   try {
     const supabase = createAdminClient();
+
+    // 1. Fetch images to delete from Supabase storage bucket
+    const { data: puja } = await supabase
+      .from('pujas')
+      .select('banner_image_url, gallery_images')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (puja) {
+      const imagesToDelete = [
+        puja.banner_image_url,
+        ...(Array.isArray(puja.gallery_images) ? puja.gallery_images : []),
+      ].filter((img): img is string => Boolean(img));
+
+      if (imagesToDelete.length > 0) {
+        await deleteStorageImages(imagesToDelete, 'pujas');
+      }
+    }
+
+    // 2. Delete puja from DB
     const { error } = await supabase.from('pujas').delete().eq('id', id);
     if (error) {
       console.error('Error deleting puja from Supabase:', error);
