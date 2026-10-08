@@ -34,9 +34,9 @@ import { PujaRecord, PujaPackageRecord, PujaBenefitItem, PujaProcessStepItem, Pu
 // Curated Royalty-Free Sacred Temple Presets
 const SACRED_IMAGE_PRESETS = [
   {
-    label: 'Gaya Vishnu Pad',
+    label: 'Surat Tapi River Ghat',
     url: 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=1200&q=80',
-    location: 'Gaya Ji, Bihar',
+    location: 'Surat, Gujarat',
   },
   {
     label: 'Varanasi Ganga Ghat',
@@ -85,20 +85,20 @@ const PUJA_TEMPLATES = [
     },
   },
   {
-    id: 'gaya-pitru',
-    name: '🪔 Gaya Ji Sarva Pitru Shanti & Pind Daan',
+    id: 'surat-tapi-pitru',
+    name: '🪔 Surat Tapi River Sarva Pitru Shanti & Pind Daan',
     data: {
-      title: 'Sarva Pitru Shanti Mahapuja at Gaya Ji',
-      subtitle: 'Ancestral peace, Pitru Dosh Nivaran and divine blessings across seven generations',
-      locationName: 'Vishnu Pad Mandir, Gaya Ji, Bihar',
+      title: 'Sarva Pitru Shanti Mahapuja on Holy Tapi River, Surat',
+      subtitle: 'Ancestral peace, Pitru Dosh Nivaran and divine blessings on the banks of holy Surya-Putri Tapi',
+      locationName: 'Holy Tapi River Ghat, Surat, Gujarat',
       tithiDetails: 'Amavasya / Bhadrapada Shukla Purnima',
       startingPrice: 851,
       bannerImageUrl: 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=1200&q=80',
       shortDescription:
-        'Perform sacred Pitru Tarpana & Pind Daan at holy Vishnu Pad in Gaya. Free your lineage from ancestral afflictions and invite generational peace, health & prosperity.',
+        'Perform sacred Pitru Tarpana & Pind Daan on the sacred banks of River Tapi in Surat. Free your lineage from ancestral afflictions and invite generational peace, health & prosperity.',
       description:
-        'According to traditional Sanatan beliefs, Gaya is the ultimate sacred shrine for Pitru Mukti. Performing this Mahapuja with your Gotra and family names recited by Vedic Pandits brings complete Shanti to departed ancestors. Devotees receive live streaming access, uncut video recording, and consecrated Tirth Prasad delivered directly to their doorstep.',
-      meetingLink: 'https://meet.google.com/dharmik-gaya-puja',
+        'In the holy Tapi Puran, river Tapi (Surya-putri) is renowned as a divine kshetra where sacred Tarpana grants liberation and peace to ancestors across generations. Performing this Mahapuja with your Gotra and family names recited by Vedic Pandits brings complete Shanti to departed souls. Devotees receive live streaming access, uncut video recording, and consecrated Prasad delivered directly to their doorstep.',
+      meetingLink: 'https://meet.google.com/dharmik-surat-puja',
     },
   },
   {
@@ -721,7 +721,7 @@ export default function PujaForm({ initialPuja, isEdit = false }: PujaFormProps)
                       type="text"
                       value={title}
                       onChange={(e) => handleTitleChange(e.target.value)}
-                      placeholder="e.g. Sarva Pitru Shanti Mahapuja at Gaya Ji"
+                      placeholder="e.g. Sarva Pitru Shanti Mahapuja on Holy Tapi River, Surat"
                       required
                       className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:border-amber-600"
                     />
@@ -737,7 +737,7 @@ export default function PujaForm({ initialPuja, isEdit = false }: PujaFormProps)
                         type="text"
                         value={locationName}
                         onChange={(e) => setLocationName(e.target.value)}
-                        placeholder="Vishnu Pad Mandir, Gaya Ji, Bihar"
+                        placeholder="Holy Tapi River Ghat, Surat, Gujarat"
                         required
                         className="w-full pl-9 pr-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:border-amber-600"
                       />
@@ -797,7 +797,7 @@ export default function PujaForm({ initialPuja, isEdit = false }: PujaFormProps)
                       value={slug}
                       readOnly={!isSlugManual}
                       onChange={(e) => setSlug(e.target.value)}
-                      placeholder="sarva-pitru-shanti-puja-gaya"
+                      placeholder="sarva-pitru-shanti-puja-surat"
                       className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-mono ${
                         isSlugManual
                           ? 'border-slate-300 bg-white'

@@ -124,7 +124,7 @@ CREATE POLICY "Allow service role all on enrollments"
   USING (true) WITH CHECK (true);
 
 -- 5. INITIAL SEED DATA
--- Sarva Pitru Shanti Mahapuja at Gaya Ji
+-- Sarva Pitru Shanti Mahapuja on Holy Tapi River, Surat
 INSERT INTO public.pujas (
   id,
   title,
@@ -149,11 +149,11 @@ INSERT INTO public.pujas (
   display_order
 ) VALUES (
   '11111111-1111-1111-1111-111111111111',
-  'Sarva Pitru Shanti Mahapuja at Gaya Ji',
-  'sarva-pitru-shanti-puja-gaya',
-  'Ancestral peace, Pitru Dosh Nivaran and divine blessings across seven generations',
-  'Perform sacred Pitru Tarpana & Pind Daan at the holy Vishnu Pad in Gaya. Free your lineage from ancestral afflictions and invite generational peace, health & prosperity.',
-  'According to traditional Sanatan beliefs, Gaya is the ultimate sacred shrine for Pitru Mukti. Performing this Mahapuja with your Gotra and family names recited by Vedic Pandits brings complete Shanti to departed ancestors. Devotees will receive live streaming access, an uncut video recording of the ritual, and consecrated Tirth Prasad delivered directly to their doorstep.',
+  'Sarva Pitru Shanti Mahapuja on Holy Tapi River, Surat',
+  'sarva-pitru-shanti-puja-surat',
+  'Ancestral peace, Pitru Dosh Nivaran and divine blessings on the banks of holy Surya-Putri Tapi',
+  'Perform sacred Pitru Tarpana & Pind Daan on the sacred banks of River Tapi in Surat. Free your lineage from ancestral afflictions and invite generational peace, health & prosperity.',
+  'In the holy Tapi Puran, river Tapi (Surya-putri) is renowned as a divine kshetra where sacred Tarpana grants liberation and peace to ancestors across generations. Performing this Mahapuja with your Gotra and family names recited by Vedic Pandits brings complete Shanti to departed souls. Devotees receive live streaming access, uncut video recording of the ritual, and consecrated Prasad delivered directly to their doorstep.',
   'https://images.unsplash.com/photo-1544816155-12df9643f363?w=1200&q=80',
   ARRAY[
     'https://images.unsplash.com/photo-1544816155-12df9643f363?w=800&q=80',
@@ -162,34 +162,35 @@ INSERT INTO public.pujas (
   ],
   NOW() + INTERVAL '3 days',
   NOW() + INTERVAL '2 days 18 hours',
-  'Vishnu Pad Mandir, Gaya Ji, Bihar',
+  'Holy Tapi River Ghat, Surat, Gujarat',
   'Bhadrapada Shukla Purnima (Pitru Paksha Aarambh)',
   851.00,
   'upcoming',
   true,
   true,
-  'https://meet.google.com/dharmik-gaya-puja',
+  'https://meet.google.com/dharmik-surat-puja',
   '[
     {"title": "Pitru Dosh Nivaran", "description": "Dissolves karmic blocks hindering financial growth, marriage prospects, and mental peace."},
     {"title": "Blessings for 7 Generations", "description": "Pacifies ancestral souls so they bestow perpetual protection, health, and progeny harmony."},
-    {"title": "Doorstep Tirth Prasad Delivery", "description": "Receive an authentic Aashirwad Box with sacred Ganga-Falgu Jal, Til, and Temple Prasad."},
+    {"title": "Doorstep Tirth Prasad Delivery", "description": "Receive an authentic Aashirwad Box with sacred Tapi Jal, Til, and Temple Prasad."},
     {"title": "Personalized Vedic Sankalp", "description": "Qualified Teerth Purohits chant your Gotra, Nakshatra, and Family names during Ahuti."}
   ]'::jsonb,
   '[
-    {"step": 1, "title": "Devotee Sankalp", "description": "Purohit recites your Name, Gotra, and wish before the sacred Falgu river altar."},
-    {"step": 2, "title": "Pind Daan & Til Tarpana", "description": "Authentic Vedic offerings of Barley, Til, Honey, and Milk honoring your lineage."},
+    {"step": 1, "title": "Devotee Sankalp", "description": "Purohit recites your Name, Gotra, and wish before the sacred River Tapi altar in Surat."},
+    {"step": 2, "title": "Pind Daan & Til Tarpana", "description": "Authentic Vedic offerings of Barley, Til, Honey, and Milk honoring your lineage on holy Tapi ghats."},
     {"step": 3, "title": "Maha Havan & Pitru Gayatri", "description": "Purifying sacred fire ceremony reciting 1008 Pitru Gayatri Mantras."},
     {"step": 4, "title": "WhatsApp Video & Prasad Dispatch", "description": "Full HD video recording shared on your WhatsApp and consecrated Prasad dispatched."}
   ]'::jsonb,
   '[
-    {"question": "Do I need to be physically present at Gaya?", "answer": "No. The Puja is performed on your behalf by authenticated Purohits using your Gotra and Name. You can watch live or view the complete uncut video recording sent to your WhatsApp."},
+    {"question": "Do I need to be physically present in Surat?", "answer": "No. The Puja is performed on your behalf by authenticated Purohits on the sacred banks of River Tapi using your Gotra and Name. You can watch live or view the complete uncut video recording sent to your WhatsApp."},
+    {"question": "What is the spiritual significance of River Tapi for Pitru Puja?", "answer": "River Tapi is revered as Suryaputri (daughter of Lord Surya and Chhaya Devi). Sanatan scriptures state that performing Tarpana and Pind Daan on the holy banks of Tapi bestows swift liberation to ancestors and removes intense Pitru Dosh."},
     {"question": "What if I do not know my Gotra?", "answer": "In Sanatan Dharma traditions, if you do not know your Gotra, Panditji will take the universal Kashyap Gotra Sankalp on your behalf, which is fully valid and auspicious."},
     {"question": "When and how will I receive the meeting link?", "answer": "On the morning of the Puja day, our team will send the personalized joining link to your registered WhatsApp number and Email."}
   ]'::jsonb,
   1
 ) ON CONFLICT (id) DO NOTHING;
 
--- Packages for Gaya Puja
+-- Packages for Surat Tapi Puja
 INSERT INTO public.puja_packages (
   id, puja_id, name, package_type, max_persons, price, original_price, badge_text, description, inclusions, display_order
 ) VALUES
@@ -242,7 +243,7 @@ INSERT INTO public.puja_packages (
   2900.00,
   'Best Value',
   'Complete Family Sankalp for up to 6 members with Gau Seva, Anna Daan, and consecrated Prasad.',
-  '["Up to 6 Family Members recited", "Pitru Tarpan & Sampoorna Havan", "Special Gau Grass & Anna Daan seva", "Premium Aashirwad Box with Falgu Jal", "Full WhatsApp video & photos proof"]'::jsonb,
+  '["Up to 6 Family Members recited", "Pitru Tarpan & Sampoorna Havan", "Special Gau Grass & Anna Daan seva", "Premium Aashirwad Box with Tapi Jal", "Full WhatsApp video & photos proof"]'::jsonb,
   4
 ) ON CONFLICT (id) DO NOTHING;
 
